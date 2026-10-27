@@ -65,7 +65,7 @@ def _compute_cache_key(state: AgentState) -> str:
     # follow-up "and 2024?" that resolves to the same form.
     effective_question = (state.rewritten_question or state.question).lower().strip()
     components = [
-        "grounding-v2",
+        "grounding-v3",
         effective_question,
         state.question_type or "",
         state.cik or "",

@@ -239,3 +239,12 @@ async def test_structured_fact_needs_no_llm_and_passes_citation(monkeypatch, uni
     s = s.model_copy(update=await validate.validate(s))
     out = await cite_check.cite_check(s)
     assert out["verified"] is True
+
+
+def test_evidence_candidate_keeps_us_district_court_together():
+    sentence = (
+        "In August 2024, the U.S. District Court for the District of "
+        "Columbia ruled that the company violated antitrust laws."
+    )
+    candidates = runtime.evidence_candidates([chunk(sentence, 1)])
+    assert [text for _, text in candidates] == [sentence]
