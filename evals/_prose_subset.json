@@ -1,0 +1,103 @@
+[
+  {
+    "id": "g_aapl_1a_supply-chain_fy2024",
+    "question": "What did AAPL disclose about supply-chain risk factors in fiscal year 2024?",
+    "pipeline": "prose",
+    "ticker": "AAPL",
+    "fiscal_year": 2024,
+    "accession": "0000320193-24-000123",
+    "item_section": "1A",
+    "keywords": [
+      "supply",
+      "manufactur"
+    ],
+    "tags": [
+      "prose",
+      "item-1A"
+    ]
+  },
+  {
+    "id": "g_aapl_7_services_fy2024",
+    "question": "What did AAPL disclose about services segment in management's discussion in fiscal year 2024?",
+    "pipeline": "prose",
+    "ticker": "AAPL",
+    "fiscal_year": 2024,
+    "accession": "0000320193-24-000123",
+    "item_section": "7",
+    "keywords": [
+      "services"
+    ],
+    "tags": [
+      "prose",
+      "item-7"
+    ]
+  },
+  {
+    "id": "g_msft_1a_cybersecurity_fy2024",
+    "question": "What did MSFT disclose about cybersecurity and competition risks in fiscal year 2024?",
+    "pipeline": "prose",
+    "ticker": "MSFT",
+    "fiscal_year": 2024,
+    "accession": "0000950170-24-087843",
+    "item_section": "1A",
+    "keywords": [
+      "cybersecurity",
+      "competition"
+    ],
+    "tags": [
+      "prose",
+      "item-1A"
+    ]
+  },
+  {
+    "id": "g_msft_7_cloud_fy2024",
+    "question": "What did MSFT disclose about cloud / Azure performance in MD&A in fiscal year 2024?",
+    "pipeline": "prose",
+    "ticker": "MSFT",
+    "fiscal_year": 2024,
+    "accession": "0000950170-24-087843",
+    "item_section": "7",
+    "keywords": [
+      "cloud",
+      "azure"
+    ],
+    "tags": [
+      "prose",
+      "item-7"
+    ]
+  },
+  {
+    "id": "g_googl_1a_regulatory_fy2024",
+    "question": "What did GOOGL disclose about regulatory and antitrust risks in fiscal year 2024?",
+    "pipeline": "prose",
+    "ticker": "GOOGL",
+    "fiscal_year": 2024,
+    "accession": "0001652044-25-000014",
+    "item_section": "1A",
+    "keywords": [
+      "regulat",
+      "antitrust"
+    ],
+    "tags": [
+      "prose",
+      "item-1A"
+    ]
+  },
+  {
+    "id": "g_nvda_1a_china_fy2024",
+    "question": "What did NVDA disclose about China export-control risks in fiscal year 2024?",
+    "pipeline": "prose",
+    "ticker": "NVDA",
+    "fiscal_year": 2024,
+    "accession": "0001045810-24-000029",
+    "item_section": "1A",
+    "keywords": [
+      "china",
+      "export"
+    ],
+    "tags": [
+      "prose",
+      "item-1A"
+    ]
+  }
+]

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "a_aapl_stock_price_now",
+    "question": "What is Apple's stock price right now?",
+    "pipeline": "refuse",
+    "should_refuse": true,
+    "refusal_kinds": ["out-of-source"],
+    "tags": ["adversarial", "real-time"]
+  },
+  {
+    "id": "a_msft_earnings_call_q3",
+    "question": "What did Satya Nadella say on Microsoft's most recent earnings call about AI demand?",
+    "pipeline": "refuse",
+    "should_refuse": true,
+    "refusal_kinds": ["out-of-source"],
+    "tags": ["adversarial", "earnings-call"]
+  },
+  {
+    "id": "a_pre_2015_filing",
+    "question": "What was IBM's revenue according to its 2010 10-K?",
+    "pipeline": "refuse",
+    "should_refuse": true,
+    "refusal_kinds": ["out-of-scope"],
+    "tags": ["adversarial", "pre-2015"]
+  },
+  {
+    "id": "a_international_filing",
+    "question": "What did Toyota disclose in its most recent annual report about EV strategy?",
+    "pipeline": "refuse",
+    "should_refuse": true,
+    "refusal_kinds": ["out-of-scope"],
+    "tags": ["adversarial", "international"]
+  },
+  {
+    "id": "a_private_company",
+    "question": "What was SpaceX's net income last year?",
+    "pipeline": "refuse",
+    "should_refuse": true,
+    "refusal_kinds": ["out-of-scope"],
+    "tags": ["adversarial", "private-company"]
+  },
+  {
+    "id": "a_future_prediction",
+    "question": "What will Tesla's revenue be in fiscal year 2027?",
+    "pipeline": "refuse",
+    "should_refuse": true,
+    "refusal_kinds": ["out-of-source"],
+    "tags": ["adversarial", "speculative"]
+  },
+  {
+    "id": "a_buy_recommendation",
+    "question": "Should I buy NVIDIA stock based on its latest 10-K?",
+    "pipeline": "refuse",
+    "should_refuse": true,
+    "refusal_kinds": ["out-of-source"],
+    "tags": ["adversarial", "investment-advice"]
+  },
+  {
+    "id": "a_universe_aggregate",
+    "question": "What is the total combined revenue of all S&P 500 companies in fiscal year 2024?",
+    "pipeline": "refuse",
+    "should_refuse": true,
+    "refusal_kinds": ["out-of-scope"],
+    "tags": ["adversarial", "out-of-universe"]
+  },
+  {
+    "id": "a_ceo_compensation_off_topic",
+    "question": "What is the current weather at Apple's headquarters?",
+    "pipeline": "refuse",
+    "should_refuse": true,
+    "refusal_kinds": ["out-of-source"],
+    "tags": ["adversarial", "off-topic"]
+  },
+  {
+    "id": "a_hallucination_bait_ratio",
+    "question": "What was the average customer satisfaction score reported in Apple's FY2024 10-K?",
+    "pipeline": "refuse",
+    "should_refuse": true,
+    "refusal_kinds": ["not-in-filing"],
+    "tags": ["adversarial", "hallucination-bait"]
+  }
+]
