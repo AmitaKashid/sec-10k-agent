@@ -1,0 +1,51 @@
+ticker,name,sector
+AAPL,Apple Inc.,Technology
+MSFT,Microsoft Corporation,Technology
+GOOGL,Alphabet Inc.,Technology
+AMZN,Amazon.com Inc.,Technology
+META,Meta Platforms Inc.,Technology
+NVDA,NVIDIA Corporation,Technology
+TSLA,Tesla Inc.,Technology
+ADBE,Adobe Inc.,Technology
+CRM,Salesforce Inc.,Technology
+ORCL,Oracle Corporation,Technology
+JPM,JPMorgan Chase & Co.,Financials
+BAC,Bank of America Corp.,Financials
+WFC,Wells Fargo & Company,Financials
+GS,Goldman Sachs Group Inc.,Financials
+MS,Morgan Stanley,Financials
+BLK,BlackRock Inc.,Financials
+V,Visa Inc.,Financials
+MA,Mastercard Inc.,Financials
+UNH,UnitedHealth Group Inc.,Healthcare
+JNJ,Johnson & Johnson,Healthcare
+PFE,Pfizer Inc.,Healthcare
+LLY,Eli Lilly and Company,Healthcare
+MRK,Merck & Co. Inc.,Healthcare
+ABBV,AbbVie Inc.,Healthcare
+TMO,Thermo Fisher Scientific Inc.,Healthcare
+WMT,Walmart Inc.,Consumer
+HD,Home Depot Inc.,Consumer
+COST,Costco Wholesale Corp.,Consumer
+MCD,McDonald's Corporation,Consumer
+NKE,Nike Inc.,Consumer
+SBUX,Starbucks Corporation,Consumer
+PG,Procter & Gamble Co.,Consumer
+KO,Coca-Cola Company,Consumer
+BA,Boeing Company,Industrials
+CAT,Caterpillar Inc.,Industrials
+GE,General Electric Company,Industrials
+HON,Honeywell International Inc.,Industrials
+UPS,United Parcel Service Inc.,Industrials
+RTX,RTX Corporation,Industrials
+XOM,Exxon Mobil Corporation,Energy
+CVX,Chevron Corporation,Energy
+COP,ConocoPhillips,Energy
+SLB,Schlumberger Limited,Energy
+DIS,Walt Disney Company,Communications
+NFLX,Netflix Inc.,Communications
+T,AT&T Inc.,Communications
+PLD,Prologis Inc.,Real Estate
+AMT,American Tower Corporation,Real Estate
+LIN,Linde plc,Materials
+SHW,Sherwin-Williams Company,Materials
