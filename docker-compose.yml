@@ -1,0 +1,24 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: sec_agent_postgres
+    environment:
+      POSTGRES_DB: sec_agent
+      POSTGRES_USER: sec_agent
+      POSTGRES_PASSWORD: dev_only
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # First-init only: creates sec_agent_test alongside sec_agent so
+      # integration tests have a hard-isolated database. Existing volumes
+      # get the test DB via the conftest auto-create helper instead.
+      - ./scripts/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sec_agent -d sec_agent"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
