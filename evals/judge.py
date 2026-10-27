@@ -93,7 +93,7 @@ class JudgeVerdict(BaseModel):
 
 def _cache_key(model: str, question: str, answer: str, sources: list[dict[str, Any]]) -> str:
     payload = json.dumps(
-        {"m": model, "q": question, "a": answer, "s": sources},
+        {"version": "full-chunk-v1", "m": model, "q": question, "a": answer, "s": sources},
         sort_keys=True,
         default=str,
     )
@@ -136,7 +136,7 @@ def _render_source(s: dict[str, Any]) -> str:
         # `text`. Slicing `text[char_start:char_end]` yields empty for
         # every chunk past seq=0. Render the chunk body directly,
         # truncated to keep the judge prompt bounded.
-        slice_text = (s["text"] or "")[:1200]
+        slice_text = s["text"] or ""
         return (
             f"[Chunk] item={s.get('item')} accn={s.get('accession_no')}\n"
             f"---\n{slice_text}\n---"

@@ -63,3 +63,18 @@ def test_cache_hit_short_circuits_llm(tmp_path):
     assert verdict.total_claims == 2
     assert verdict.unsupported_count == 1
     assert verdict.reasoning == "cached"
+
+
+def test_render_source_includes_evidence_after_1200_characters():
+    from evals.judge import _render_source
+
+    late_evidence = "The company relies on a small number of suppliers."
+    source = {
+        "item": "1A",
+        "accession_no": "example",
+        "text": "A" * 1300 + late_evidence,
+    }
+
+    rendered = _render_source(source)
+
+    assert late_evidence in rendered
