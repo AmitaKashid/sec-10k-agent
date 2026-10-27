@@ -119,7 +119,7 @@ def evidence_candidates(chunks):
     for chunk in chunks[:4]:
         count = 0
         # Split only at sentence/paragraph boundaries, retaining original text.
-        for span in re.split(r"(?<=[.!?])\s+(?=[A-Z])|\n+", chunk.text):
+        for span in re.split(r"(?<=[.!?])(?<!U\.S\.)\s+(?=[A-Z])|\n+", chunk.text):
             text = span.strip()
             size = len(text.encode("utf-8"))
             if not 50 <= len(text) <= 650 or text[-1:] not in ".!?":
