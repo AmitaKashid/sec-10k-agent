@@ -47,12 +47,14 @@ type SidebarProps = {
   activeRoute?: ActiveRoute;
   companyCount?: number;
   healthOk?: boolean;
+  onNewThread?: () => void;
 };
 
 export default function Sidebar({
   activeRoute = "thread",
   companyCount = 0,
   healthOk = true,
+  onNewThread,
 }: SidebarProps) {
   // Default closed on mobile so the drawer doesn't cover the page on first
   // paint. Desktop stays open. matchMedia is read once on mount; we don't
@@ -130,7 +132,13 @@ export default function Sidebar({
           className={`nav-item ${activeRoute === "thread" ? "is-active" : ""}`}
           data-tip="New thread"
           aria-label="New thread"
-          onClick={closeOnMobile}
+          onClick={(event) => {
+            if (onNewThread) {
+              event.preventDefault();
+              onNewThread();
+            }
+            closeOnMobile();
+          }}
         >
           <span className="ic"><IconCirclePlus /></span>
           <span className="text">New thread</span>
