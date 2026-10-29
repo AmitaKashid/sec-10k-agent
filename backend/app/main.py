@@ -48,7 +48,9 @@ def _checkpointer_conn_string() -> str:
     """Convert the SQLAlchemy+asyncpg DATABASE_URL to a psycopg-compatible
     URL for AsyncPostgresSaver. psycopg does NOT understand the
     `+asyncpg` driver suffix."""
-    return settings.DATABASE_URL.replace("+asyncpg", "")
+    from app.agent.memory import checkpoint_conn_string
+
+    return checkpoint_conn_string(settings.DATABASE_URL)
 
 
 @asynccontextmanager

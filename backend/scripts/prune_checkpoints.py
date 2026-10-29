@@ -72,7 +72,9 @@ def uuid6_cutoff(dt: datetime) -> str:
 
 
 def _conn_string() -> str:
-    return settings.DATABASE_URL.replace("+asyncpg", "")
+    from app.agent.memory import checkpoint_conn_string
+
+    return checkpoint_conn_string(settings.DATABASE_URL)
 
 
 async def _stale_thread_ids(conn: psycopg.AsyncConnection, cutoff: str, limit: int) -> list[str]:

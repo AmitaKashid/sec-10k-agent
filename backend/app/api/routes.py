@@ -20,6 +20,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
+from app.agent.memory import checkpoint_key
 from app.agent.graph import GRAPH
 from app.agent.state import AgentState
 from app.api.anon_quota import check_and_increment as anon_check_and_increment
@@ -250,8 +251,11 @@ async def ask(
     # isn't, thread_id stays None so the response signals "stateless" and
     # we never attach a configurable thread to a non-checkpointed graph.
     thread_id: str | None = None
-    if checkpointer_active:
+    if checkpointer_active and identity.tier == "user":
         thread_id = body.thread_id or str(uuid.uuid4())
+    elif checkpointer_active:
+        # Anonymous visitors retain the original stateless behavior.
+        graph = GRAPH
 
     initial = AgentState(
         question=body.question,
@@ -261,7 +265,10 @@ async def ask(
         validate_model_override=body.validate_model_override,
     )
 
-    config = {"configurable": {"thread_id": thread_id}} if thread_id else None
+    config = (
+        {"configurable": {"thread_id": checkpoint_key(identity.key, thread_id)}}
+        if thread_id else None
+    )
 
     wants_json = bool(accept) and "application/json" in accept and "text/event-stream" not in accept
     if wants_json:
