@@ -274,6 +274,7 @@ export default function Page() {
           body: JSON.stringify({ question: q, thread_id: threadIdRef.current }),
           signal: ctrl.signal,
         });
+        if (ctrl.signal.aborted) return;
         if (!res.body) {
           const errText = await res.text().catch(() => "");
           throw new Error(`HTTP ${res.status}: ${errText.slice(0, 120)}`);
@@ -299,6 +300,10 @@ export default function Page() {
 
         outer: while (true) {
           const { done, value } = await reader.read();
+          if (ctrl.signal.aborted) {
+            await reader.cancel().catch(() => {});
+            return;
+          }
           if (done) break;
           buf += decoder.decode(value, { stream: true });
           let sepIdx: number;
@@ -447,6 +452,7 @@ export default function Page() {
           updateTurn(turn.id, { isStreaming: false, statusLine: "Stream ended without result" });
         }
       } catch (err: unknown) {
+        if (ctrl.signal.aborted) return;
         if (err instanceof Error && err.name === "AbortError") return;
         clearTimers();
         updateTurn(turn.id, {
@@ -480,6 +486,20 @@ export default function Page() {
   );
 
   const [openSources, setOpenSources] = useState<Set<string>>(new Set());
+  const onNewThread = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    clearTimers();
+    threadIdRef.current = crypto.randomUUID();
+    setTurns([]);
+    setQuery("");
+    setActiveCiteFor(null);
+    setOpenSources(new Set());
+    setModalPayload(null);
+    setToastPayload(null);
+    setPendingQuestion("");
+  }, [clearTimers]);
+
   const toggleSources = useCallback((turnId: string) => {
     setOpenSources((prev) => {
       const next = new Set(prev);
@@ -524,7 +544,7 @@ export default function Page() {
       />
       <LimitToast payload={toastPayload} onDismiss={() => setToastPayload(null)} />
 
-      <Sidebar activeRoute="thread" companyCount={companyCount} healthOk={healthOk} />
+      <Sidebar activeRoute="thread" companyCount={companyCount} healthOk={healthOk} onNewThread={onNewThread} />
 
       <section className="main">
         <div className="topbar">
