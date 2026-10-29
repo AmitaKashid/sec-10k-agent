@@ -1,8 +1,8 @@
-\# Deployment
+# Deployment
 
 
 
-\## Services
+## Services
 
 
 
@@ -24,21 +24,21 @@ Backend: https://sec-10k-backend.onrender.com
 
 
 
-\## Backend environment
+## Backend environment
 
 
 
 Configure secrets privately in Render:
 
-\- DATABASE\_URL
+- DATABASE_URL
 
-\- GROQ\_API\_KEY
+- GROQ_API_KEY
 
-\- GEMINI\_API\_KEY
+- GEMINI_API_KEY
 
-\- API\_KEY
+- API_KEY
 
-\- SEC\_USER\_AGENT
+- SEC_USER_AGENT
 
 
 
@@ -62,47 +62,47 @@ Additional settings:
 
 PGSSLROOTCERT=/etc/ssl/certs/ca-certificates.crt
 
-EMBEDDING\_PROVIDER=gemini
+EMBEDDING_PROVIDER=gemini
 
-GEMINI\_EMBEDDING\_MODEL=gemini-embedding-2
+GEMINI_EMBEDDING_MODEL=gemini-embedding-2
 
-PLAN\_MODEL=openai/gpt-oss-20b
+PLAN_MODEL=openai/gpt-oss-20b
 
-VALIDATE\_MODEL=openai/gpt-oss-120b
+VALIDATE_MODEL=openai/gpt-oss-120b
 
-REFUSAL\_MODEL=openai/gpt-oss-20b
+REFUSAL_MODEL=openai/gpt-oss-20b
 
-ALLOWED\_MODELS=openai/gpt-oss-20b,openai/gpt-oss-120b
+ALLOWED_MODELS=openai/gpt-oss-20b,openai/gpt-oss-120b
 
-LANGGRAPH\_CHECKPOINTER\_ENABLED=false
+LANGGRAPH_CHECKPOINTER_ENABLED=false
 
-EXPOSE\_TRACE\_URLS=false
+EXPOSE_TRACE_URLS=false
 
-ANON\_LIFETIME\_ENABLED=false
+ANON_LIFETIME_ENABLED=false
 
-ASK\_TOKEN\_LIMITER\_ENABLED=true
+ASK_TOKEN_LIMITER_ENABLED=true
 
-ASK\_ANON\_REQS\_PER\_MIN=3
+ASK_ANON_REQS_PER_MIN=3
 
-ASK\_ANON\_TOKENS\_PER\_MIN=15000
+ASK_ANON_TOKENS_PER_MIN=15000
 
-ASK\_USER\_REQS\_PER\_MIN=10
+ASK_USER_REQS_PER_MIN=10
 
-ASK\_USER\_TOKENS\_PER\_MIN=50000
+ASK_USER_TOKENS_PER_MIN=50000
 
 ```
 
 
 
-Configure CLERK\_ISSUER and CLERK\_JWKS\_URL for the same Clerk
+Configure CLERK_ISSUER and CLERK_JWKS_URL for the same Clerk
 
-application used by the frontend. Set CLERK\_AUTHORIZED\_PARTIES
+application used by the frontend. Set CLERK_AUTHORIZED_PARTIES
 
 to the permitted frontend origins, including the deployed Vercel URL.
 
 
 
-\## Frontend environment
+## Frontend environment
 
 
 
@@ -110,21 +110,21 @@ Configure privately in Vercel:
 
 
 
-\- FASTAPI\_URL=https://sec-10k-backend.onrender.com
+- FASTAPI_URL=https://sec-10k-backend.onrender.com
 
-\- API\_KEY: same value as Render
+- API_KEY: same value as Render
 
-\- NEXT\_PUBLIC\_CLERK\_PUBLISHABLE\_KEY
+- NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
-\- CLERK\_SECRET\_KEY
-
-
-
-Never expose API\_KEY or CLERK\_SECRET\_KEY through NEXT\_PUBLIC\_ variables.
+- CLERK_SECRET_KEY
 
 
 
-\## Database and startup
+Never expose API_KEY or CLERK_SECRET_KEY through NEXT_PUBLIC_ variables.
+
+
+
+## Database and startup
 
 
 
@@ -134,13 +134,13 @@ Schema version at deployment: 0005.
 
 Initial data transferred from the local database:
 
-\- 5 companies
+- 5 companies
 
-\- 15 filings
+- 15 filings
 
-\- 1,358 chunks with embeddings
+- 1,358 chunks with embeddings
 
-\- 343 XBRL facts
+- 343 XBRL facts
 
 
 
@@ -150,17 +150,17 @@ The backend listens on the hosting platform's PORT.
 
 
 
-\## Verification
+## Verification
 
 
 
-\- GET /health returned database and graph status "ok".
+- GET /health returned database and graph status "ok".
 
-\- Microsoft FY2025 revenue returned $281,724,000,000 with a verified source.
+- Microsoft FY2025 revenue returned $281,724,000,000 with a verified source.
 
-\- Apple FY2024 supply-chain question rendered cited filing excerpts.
+- Apple FY2024 supply-chain question rendered cited filing excerpts.
 
-\- Signed-in identity and EDGAR links were manually checked.
+- Signed-in identity and EDGAR links were manually checked.
 
 
 
@@ -168,23 +168,23 @@ These checks are smoke tests, not a full production certification.
 
 
 
-\## Limitations
+## Limitations
 
 
 
-\- Render Free sleeps when idle, causing cold-start delays.
+- Render Free sleeps when idle, causing cold-start delays.
 
-\- Provider free-tier quotas can interrupt requests.
+- Provider free-tier quotas can interrupt requests.
 
-\- Graph checkpointing is disabled; persistent graph conversation state
+- Graph checkpointing is disabled; persistent graph conversation state
 
-&#x20; is not enabled.
+  is not enabled.
 
-\- Request limits do not guarantee provider quota availability.
+- Request limits do not guarantee provider quota availability.
 
-\- Anonymous lifetime limits remain disabled pending proxy-IP verification.
+- Anonymous lifetime limits remain disabled pending proxy-IP verification.
 
-\- CI runs mocked backend/evaluation tests and frontend type/lint checks;
+- CI runs mocked backend/evaluation tests and frontend type/lint checks;
 
-&#x20; it does not run live evaluations or browser tests.
+  it does not run live evaluations or browser tests.
 
