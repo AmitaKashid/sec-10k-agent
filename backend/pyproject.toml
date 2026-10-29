@@ -30,7 +30,7 @@ dependencies = [
     "langchain-openai>=0.2",
     "langchain-anthropic>=0.2",
     "langchain-groq>=0.2",
-    "langfuse>=2.50,<3",  # v2 line: @observe() + langfuse.callback.CallbackHandler (LLD 937). v3/v4 is an OTEL rewrite — separate migration.
+    "langfuse==4.18.0",  # OpenTelemetry request and node tracing
     # data ingestion
     "openai>=1.40",
     "tiktoken>=0.7",
