@@ -49,6 +49,7 @@ jobs:
             tests/unit/test_gemini_embeddings.py \
             tests/unit/test_groq_runtime.py \
             tests/unit/test_memory_config.py \
+            tests/unit/test_langfuse_v4.py \
             ../evals/tests \
             -q --junitxml=test-results.xml
 
