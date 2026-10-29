@@ -37,6 +37,7 @@ FROM python:3.12-slim AS runtime
 # libpq runtime is needed by psycopg even if the wheel is prebuilt
 # (psycopg-c links against it dynamically).
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
     libpq5 \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --uid 1000 app
