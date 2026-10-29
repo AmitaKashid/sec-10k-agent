@@ -1,0 +1,77 @@
+name: Database integration
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: sec_agent
+          POSTGRES_PASSWORD: test_only
+          POSTGRES_DB: sec_agent_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sec_agent -d sec_agent_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      SEC_USER_AGENT: ci-tests@example.com
+      DATABASE_URL: postgresql+asyncpg://sec_agent:test_only@localhost:5432/sec_agent
+      TEST_DATABASE_URL: postgresql+asyncpg://sec_agent:test_only@localhost:5432/sec_agent_test
+      LANGGRAPH_CHECKPOINTER_ENABLED: "false"
+      ASK_TOKEN_LIMITER_ENABLED: "false"
+      ANON_LIFETIME_ENABLED: "false"
+      EXPOSE_TRACE_URLS: "false"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        run: python -m pip install uv==0.13.3
+
+      - name: Install locked dependencies
+        run: uv sync --frozen --extra dev
+
+      - name: Require a reachable test database
+        run: |
+          uv run --frozen --extra dev python -c "from tests.integration.conftest import db_reachable; assert db_reachable(), 'Test database is unreachable'"
+
+      - name: Run schema integration tests
+        run: |
+          uv run --frozen --extra dev pytest \
+            tests/integration/test_schema.py \
+            -v -ra --junitxml=database-results.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-test-results
+          path: backend/database-results.xml
+          if-no-files-found: ignore
