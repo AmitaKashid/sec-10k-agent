@@ -50,6 +50,12 @@ jobs:
             tests/unit/test_groq_runtime.py \
             tests/unit/test_memory_config.py \
             tests/unit/test_langfuse_v4.py \
+            tests/unit/test_graph_followup_grounding.py \
+            tests/unit/test_history_reducer.py \
+            tests/unit/test_state_reset_defaults.py \
+            tests/unit/test_terminal_turn_append.py \
+            tests/unit/test_node_plan_followup.py \
+            tests/unit/test_route_memory.py \
             tests/unit/test_auth.py \
             tests/unit/test_anon_gate.py \
             tests/unit/test_anon_quota.py \
