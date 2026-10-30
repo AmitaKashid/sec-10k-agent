@@ -1,9 +1,5 @@
 # SEC 10-K Diligence Agent
 
-**Maintained by [Amita Kashid](https://github.com/AmitaKashid)**
-
-[Live demo](https://sec-10k-agent-three.vercel.app/) · [API health](https://sec-10k-backend.onrender.com/health) · [GitHub](https://github.com/AmitaKashid/sec-10k-agent)
-
 A deployable AI agent that answers natural-language questions about US public companies, grounding answers in SEC filings with verifiable citations. Fetches directly from SEC EDGAR (no web search), validates numerical claims against structured XBRL data, and **refuses** to answer when it cannot ground a claim.
 
 The grounding approach is structural: supported numerical answers come from XBRL rather than prose, and unsupported requests follow a structured refusal path. Citation checks verify source alignment; they do not establish complete answer quality.
@@ -26,20 +22,13 @@ Two parallel data pipelines feed one LangGraph agent:
 
 ### Agent graph (LangGraph)
 
-```mermaid
-flowchart TD
-    P["Plan"] -->|Filing question| A["Access gate and filing resolution"]
-    A --> L["Locate source"]
-    L --> R["Retrieve evidence"]
-    R --> V["Cache lookup and validation"]
-    V -->|New claims| C["Citation check"]
-    V -->|Verified cache hit| E["Return response"]
-    C -->|Supported| E
-    C -->|Unsupported| X["Refusal composer"]
-    P -->|META| M["Concierge"]
-    P -->|REFUSE| X
-    M --> E
-    X --> E
+```text
+                   ┌─ Filing ─→ access / fetch ─→ locate ─→ retrieve ─→ validate ─→ cite_check ─→ END
+                   │                                                   └─ cache hit ──────────→ END
+plan ──────────────┤
+                   ├─ META ───→ concierge ─────────────────────────────────────────────────────→ END
+                   │
+                   └─ REFUSE ─→ refusal_composer ───────────────────────────────────────────────→ END
 ```
 
 Access and source gates can also route to refusal. Groq-hosted `openai/gpt-oss-20b` handles planning and refusal composition; `openai/gpt-oss-120b` handles qualitative evidence selection. Numerical formatting in the Groq path uses Python. Every graph node is wrapped in a Langfuse span under a root `/ask` trace.
@@ -267,4 +256,4 @@ The configured universe contains **50 tickers**, but coverage depends on actual 
 
 ## Maintainer
 
-[Amita Kashid](https://github.com/AmitaKashid)
+Amita Kashid
