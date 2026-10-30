@@ -11,7 +11,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-pgvector-4169E1?logo=postgresql&logoColor=white)](docker-compose.yml)
 [![LangGraph](https://img.shields.io/badge/Agent-LangGraph-168B77)](backend/app/agent/graph.py)
 
-**Maintained and extended by [Amita Kashid](https://github.com/AmitaKashid).**
+**Maintained by [Amita Kashid](https://github.com/AmitaKashid).**
 
 [Live application](https://sec-10k-agent-three.vercel.app/) · [API health](https://sec-10k-backend.onrender.com/health) · [Architecture](#architecture) · [Run locally](#run-locally) · [Tests](#tests-and-ci) · [Limitations](#scope-and-limitations)
 
@@ -36,16 +36,16 @@ Anonymous access is restricted to the configured preview tickers: **AAPL, MSFT, 
 
 The application answers from **ingested filings**. A ticker appearing in the configured universe does not mean every filing or fiscal year is loaded.
 
-## What this version adds
+## Key capabilities
 
-This repository extends the upstream implementation with changes to providers, deployment, memory, observability, and verification:
+The application combines evidence retrieval, controlled answer generation, persistent conversations, and operational visibility:
 
 - **Gemini embeddings and Groq inference:** a provider configuration that does not require OpenAI or Anthropic credentials. Gemini vectors match the existing **1,536-dimensional** database schema.
 - **Bounded Groq output handling:** strict structured planning, evidence selection by source identifiers, and controlled handling of invalid, incomplete, or quota-limited responses.
 - **Persistent, user-scoped memory:** PostgreSQL checkpoints use a storage key derived from both the authenticated user and public thread ID. Another user cannot select the same checkpoint merely by reusing a client thread ID.
 - **Langfuse v4 tracing:** request traces, child node spans, conversation sessions, and configurable input/output capture, with tracing failures kept separate from request failures.
 - **A deployed application:** Next.js 16 / React 19 on Vercel, a Dockerized FastAPI backend on Render, and PostgreSQL with pgvector on Neon.
-- **Broader automated verification:** restored and adapted tests, an isolated database runner, Windows-compatible checkpoint testing, and CI that selects complete test suites.
+- **Automated verification:** unit and integration tests, an isolated database runner, Windows-compatible checkpoint testing, and CI that selects complete test suites.
 
 ## How answers are grounded
 
@@ -401,8 +401,8 @@ Configuration is defined in [`backend/app/settings.py`](backend/app/settings.py)
 
 Use the linked filing and its reporting context when interpreting an answer. This is a research/demo application, not financial advice.
 
-## Maintainer and provenance
+## Maintainer
 
-**[Amita Kashid](https://github.com/AmitaKashid)** maintains this deployed version and its provider integration, memory isolation, tracing migration, frontend upgrades, deployment configuration, and expanded test/CI coverage.
+**[Amita Kashid](https://github.com/AmitaKashid)**
 
-The project builds on the architecture and base implementation in [Dhiraj Podar's SEC 10-K agent](https://github.com/dhirajpodar/sec-10k-agent). Credit for that upstream work remains with its author; the implementation changes described above are maintained in this repository.
+[GitHub repository](https://github.com/AmitaKashid/sec-10k-agent) · [Live application](https://sec-10k-agent-three.vercel.app/)
