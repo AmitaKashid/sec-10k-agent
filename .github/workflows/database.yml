@@ -58,16 +58,10 @@ jobs:
       - name: Install locked dependencies
         run: uv sync --frozen --extra dev
 
-      - name: Require a reachable test database
+      - name: Run all offline database integration tests
         run: |
-          uv run --frozen --extra dev python -c "from tests.integration.conftest import db_reachable; assert db_reachable(), 'Test database is unreachable'"
-
-      - name: Run schema and checkpoint integration tests
-        run: |
-          uv run --frozen --extra dev pytest \
-            tests/integration/test_schema.py \
-            tests/integration/test_checkpointer.py \
-            -v -ra --junitxml=database-results.xml
+          uv run --frozen --extra dev python scripts/run_tests.py \
+            --suite database --junitxml=database-results.xml
 
       - name: Upload test results
         if: always()

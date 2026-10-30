@@ -43,30 +43,10 @@ jobs:
       - name: Install locked dependencies
         run: uv sync --frozen --extra dev
 
-      - name: Run provider and evaluation tests
+      - name: Run all offline unit and evaluation tests
         run: |
-          uv run --frozen --extra dev pytest \
-            tests/unit/test_gemini_embeddings.py \
-            tests/unit/test_groq_runtime.py \
-            tests/unit/test_memory_config.py \
-            tests/unit/test_langfuse_v4.py \
-            tests/unit/test_node_retrieve.py \
-            tests/unit/test_node_validate.py \
-            tests/unit/test_node_cite_check.py \
-            tests/unit/test_xbrl.py \
-            tests/unit/test_graph_followup_grounding.py \
-            tests/unit/test_history_reducer.py \
-            tests/unit/test_state_reset_defaults.py \
-            tests/unit/test_terminal_turn_append.py \
-            tests/unit/test_node_plan_followup.py \
-            tests/unit/test_route_memory.py \
-            tests/unit/test_auth.py \
-            tests/unit/test_anon_gate.py \
-            tests/unit/test_anon_quota.py \
-            tests/unit/test_route_ask_anon.py \
-            tests/unit/test_ask_limits.py \
-            ../evals/tests \
-            -q --junitxml=test-results.xml
+          uv run --frozen --extra dev python scripts/run_tests.py \
+            --suite unit --junitxml=test-results.xml
 
       - name: Upload test results
         if: always()
