@@ -9,3 +9,6 @@ __pycache__/
 node_modules/
 .next/
 backend/data_cache/
+
+/frontend/next-env.d.ts
+/frontend/*.tsbuildinfo
