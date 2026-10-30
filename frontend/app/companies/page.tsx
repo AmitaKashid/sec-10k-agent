@@ -61,6 +61,7 @@ export default function CompaniesPage() {
   const router = useRouter();
   const { isSignedIn, isLoaded } = useUser();
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [refreshNow, setRefreshNow] = useState<number | null>(null);
   const [stats, setStats] = useState<CompanyStats | null>(null);
   const [healthOk, setHealthOk] = useState<boolean>(true);
   const [query, setQuery] = useState<string>("");
@@ -82,6 +83,7 @@ export default function CompaniesPage() {
         if (!cancelled && res.ok) {
           const data = (await res.json()) as CompanyStats;
           setStats(data);
+          setRefreshNow(Date.now());
         }
       } catch {}
       try {
@@ -100,10 +102,10 @@ export default function CompaniesPage() {
   }, [isSignedIn]);
 
   const formatRefresh = (iso: string | null | undefined): string => {
-    if (!iso) return "—";
+    if (!iso || refreshNow === null) return "—";
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return "—";
-    const diffMs = Date.now() - d.getTime();
+    const diffMs = refreshNow - d.getTime();
     const diffMin = Math.floor(diffMs / 60000);
     if (diffMin < 1) return "just now";
     if (diffMin < 60) return `${diffMin}m ago`;
