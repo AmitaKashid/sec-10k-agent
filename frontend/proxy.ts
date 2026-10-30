@@ -1,6 +1,6 @@
-// Clerk middleware. All routes are public — the backend enforces the
+// Clerk proxy. All routes are public — the backend enforces the
 // anonymous tier at /ask (see docs/auth_and_rate_limit_plan.md). This
-// middleware only attaches Clerk's auth context so server components
+// proxy only attaches Clerk's auth context so server components
 // and route handlers can call `auth()`/`getToken()` when a user IS
 // signed in. Sign-in is prompted by the LimitModal (next step), not by
 // middleware redirects.

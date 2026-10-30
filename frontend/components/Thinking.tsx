@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { PipelineStep } from "@/lib/types";
 
 type Props = {
@@ -47,13 +47,8 @@ export function Thinking({ steps, isStreaming, elapsed }: Props) {
   const hasSteps = steps.length > 0;
   const allDone = hasSteps && steps.every((s) => s.status === "done");
 
-  const [open, setOpen] = useState(true);
-  const [userToggled, setUserToggled] = useState(false);
-  useEffect(() => {
-    if (userToggled) return;
-    if (allDone || errored) setOpen(false);
-    else if (isStreaming) setOpen(true);
-  }, [allDone, errored, isStreaming, userToggled]);
+  const [manualOpen, setManualOpen] = useState<boolean | null>(null);
+  const open = manualOpen ?? !(allDone || errored);
 
   const summary = errored
     ? "Error during reasoning"
@@ -67,8 +62,7 @@ export function Thinking({ steps, isStreaming, elapsed }: Props) {
         type="button"
         onClick={() => {
           if (!hasSteps) return;
-          setUserToggled(true);
-          setOpen((o) => !o);
+          setManualOpen(!open);
         }}
         className={`thinking-summary ${hasSteps ? "is-clickable" : ""}`}
         aria-expanded={hasSteps ? open : undefined}

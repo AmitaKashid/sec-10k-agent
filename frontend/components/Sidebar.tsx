@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useUser } from "@clerk/nextjs";
 import type { ActiveRoute } from "@/lib/types";
 
@@ -43,6 +43,12 @@ function IconBuilding2({ size = 20 }: IconProps) {
   );
 }
 
+function subscribeViewport(onChange: () => void) {
+  const query = window.matchMedia("(max-width: 480px)");
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
 type SidebarProps = {
   activeRoute?: ActiveRoute;
   companyCount?: number;
@@ -56,17 +62,14 @@ export default function Sidebar({
   healthOk = true,
   onNewThread,
 }: SidebarProps) {
-  // Default closed on mobile so the drawer doesn't cover the page on first
-  // paint. Desktop stays open. matchMedia is read once on mount; we don't
-  // listen for resize because the user can always toggle manually.
-  const [open, setOpen] = useState<boolean>(true);
+  const desktop = useSyncExternalStore(
+    subscribeViewport,
+    () => !window.matchMedia("(max-width: 480px)").matches,
+    () => true,
+  );
+  const [manualOpen, setOpen] = useState<boolean | null>(null);
+  const open = manualOpen ?? desktop;
   const { isSignedIn } = useUser();
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.matchMedia("(max-width: 480px)").matches) {
-      setOpen(false);
-    }
-  }, []);
 
   useEffect(() => {
     document.body.classList.toggle("is-open", open);
@@ -76,12 +79,12 @@ export default function Sidebar({
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
         e.preventDefault();
-        setOpen((v) => !v);
+        setOpen((v) => !(v ?? desktop));
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [desktop]);
 
   // On mobile, tapping a nav link should close the drawer so the user
   // sees the page they navigated to.
@@ -115,7 +118,7 @@ export default function Sidebar({
         aria-label={open ? "Collapse sidebar" : "Open sidebar"}
         aria-expanded={open}
         title={open ? "Collapse sidebar (⌘B)" : "Open sidebar (⌘B)"}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen((v) => !(v ?? desktop))}
       >
         {open ? <IconPanelLeftClose /> : <IconPanelLeft />}
       </button>

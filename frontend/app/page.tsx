@@ -343,7 +343,6 @@ export default function Page() {
             }
 
             if (parsed.event === "result") {
-              // eslint-disable-next-line no-console
               console.log("[/api/ask result]", parsed.data);
               const r = parsed.data as {
                 question_type: string | null;
