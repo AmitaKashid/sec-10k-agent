@@ -52,6 +52,7 @@ dev = [
 asyncio_mode = "auto"
 markers = [
     "live: hits real external services; opt-in only",
+    "corpus: requires downloaded real 10-K fixtures; opt-in only",
 ]
 testpaths = ["tests"]
 

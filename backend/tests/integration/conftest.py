@@ -311,3 +311,32 @@ async def agent_session(_migrated_db) -> AsyncIterator[AsyncSession]:
         await s.commit()
         yield s
     await engine.dispose()
+
+
+@pytest.fixture(autouse=True)
+def offline_graph_services(request, monkeypatch):
+    if request.node.get_closest_marker("live"):
+        yield
+        return
+    from types import SimpleNamespace
+    from app.agent.nodes import retrieve, refusal_composer
+    from app.api import token_budget
+
+    monkeypatch.setattr(settings, "ASK_TOKEN_LIMITER_ENABLED", False)
+    monkeypatch.setattr(settings, "ANON_LIFETIME_ENABLED", False)
+    monkeypatch.setattr(settings, "LANGGRAPH_CHECKPOINTER_ENABLED", False)
+    monkeypatch.setattr(settings, "EXPOSE_TRACE_URLS", False)
+    monkeypatch.setattr(settings, "PLAN_MODEL", "openai/gpt-oss-20b")
+    monkeypatch.setattr(settings, "VALIDATE_MODEL", "openai/gpt-oss-120b")
+    async def one_query(question):
+        return [question]
+    class RefusalChat:
+        async def ainvoke(self, prompt):
+            return SimpleNamespace(content="This question cannot be answered from the loaded filings.")
+    monkeypatch.setattr(retrieve, "_decompose_question", one_query)
+    monkeypatch.setattr(refusal_composer, "get_chat_model", lambda *a, **kw: RefusalChat())
+    token_budget.BUDGET._buckets.clear()
+    token_budget.REQUESTS._buckets.clear()
+    yield
+    token_budget.BUDGET._buckets.clear()
+    token_budget.REQUESTS._buckets.clear()
