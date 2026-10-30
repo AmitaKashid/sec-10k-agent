@@ -1,408 +1,270 @@
-# SEC Analyst
+# SEC 10-K Diligence Agent
 
-**Ask a question. Inspect the evidence. Continue the conversation.**
+**Maintained by [Amita Kashid](https://github.com/AmitaKashid)**
 
-[![Backend tests](https://github.com/AmitaKashid/sec-10k-agent/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/AmitaKashid/sec-10k-agent/actions/workflows/tests.yml)
-[![Database integration](https://github.com/AmitaKashid/sec-10k-agent/actions/workflows/database.yml/badge.svg?branch=main)](https://github.com/AmitaKashid/sec-10k-agent/actions/workflows/database.yml)
-[![Frontend checks](https://github.com/AmitaKashid/sec-10k-agent/actions/workflows/frontend.yml/badge.svg?branch=main)](https://github.com/AmitaKashid/sec-10k-agent/actions/workflows/frontend.yml)
+[Live demo](https://sec-10k-agent-three.vercel.app/) · [API health](https://sec-10k-backend.onrender.com/health) · [GitHub](https://github.com/AmitaKashid/sec-10k-agent)
 
-[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](backend/pyproject.toml)
-[![Next.js](https://img.shields.io/badge/Next.js-16.4.3-000000?logo=nextdotjs&logoColor=white)](frontend/package.json)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-pgvector-4169E1?logo=postgresql&logoColor=white)](docker-compose.yml)
-[![LangGraph](https://img.shields.io/badge/Agent-LangGraph-168B77)](backend/app/agent/graph.py)
+A deployable AI agent that answers natural-language questions about US public companies, grounding answers in SEC filings with verifiable citations. Fetches directly from SEC EDGAR (no web search), validates numerical claims against structured XBRL data, and **refuses** to answer when it cannot ground a claim.
 
-**Maintained by [Amita Kashid](https://github.com/AmitaKashid).**
+The grounding approach is structural: supported numerical answers come from XBRL rather than prose, and unsupported requests follow a structured refusal path. Citation checks verify source alignment; they do not establish complete answer quality.
 
-[Live application](https://sec-10k-agent-three.vercel.app/) · [API health](https://sec-10k-backend.onrender.com/health) · [Architecture](#architecture) · [Run locally](#run-locally) · [Tests](#tests-and-ci) · [Limitations](#scope-and-limitations)
+## What it does
 
-SEC Analyst is a deployed financial-research application for asking questions about US public companies' SEC 10-K filings. Numerical answers use structured XBRL facts. Qualitative answers use retrieved filing passages, with citations and links back to SEC EDGAR. Signed-in users can ask follow-ups within a persistent conversation.
+- **Type A — Numerical lookup** (e.g. "What was Apple's R&D spend in FY2024?"): plan → XBRL fact lookup → format. Restricted to a 10-item us-gaap whitelist (revenue, net income, R&D, total assets, long-term debt, cash, diluted EPS, shares out, opex, gross profit).
+- **Type B — Qualitative single-filing** (e.g. "What cybersecurity risks did Microsoft disclose in their latest 10-K?"): plan → locate Item → hybrid retrieval → validate → cite-check. Restricted to Item 1A (Risk Factors), Item 7 (MD&A), Item 8 (Financial Notes).
+- **META** — greetings / capability / how-to small talk, handled by a `concierge` node.
+- **REFUSE** — anything else (YoY, cross-company, non-whitelisted concept, non-10-K source) is refused with HTTP 200 and `refused=true`.
 
-The application separates **finding evidence**, **constructing an answer**, and **checking its citations**. When the required filing, fact, or supporting passage is unavailable, it returns a structured refusal rather than treating model knowledge as evidence.
-
-> **Project status:** deployed on Vercel, Render, and Neon; persistent conversation memory and real-time Langfuse tracing verified. The latest reported local run passed **376 selected automated tests**. Broad live answer-quality evaluation remains pending.
-
-## Try it
-
-Open the [live application](https://sec-10k-agent-three.vercel.app/) and start with:
-
-| Ask | What it demonstrates |
-|---|---|
-| “What was Microsoft's total revenue in fiscal year 2025?” | An exact numerical lookup with an XBRL source |
-| “What did Apple disclose about supply-chain risks in fiscal year 2024?” | Filing retrieval and cited source excerpts |
-| “And in fiscal year 2024?” after a Microsoft revenue question | Company and concept resolution from conversation history; sign-in required for persistent memory |
-| “Compare Apple and Microsoft's revenue growth.” | An explicit scope boundary: cross-company and growth calculations are unsupported |
-
-Anonymous access is restricted to the configured preview tickers: **AAPL, MSFT, GOOGL, AMZN, and NVDA**. Sign in to use persistent conversation memory. **New thread** clears the visible conversation and creates a new thread identifier.
-
-The application answers from **ingested filings**. A ticker appearing in the configured universe does not mean every filing or fiscal year is loaded.
-
-## Key capabilities
-
-The application combines evidence retrieval, controlled answer generation, persistent conversations, and operational visibility:
-
-- **Gemini embeddings and Groq inference:** a provider configuration that does not require OpenAI or Anthropic credentials. Gemini vectors match the existing **1,536-dimensional** database schema.
-- **Bounded Groq output handling:** strict structured planning, evidence selection by source identifiers, and controlled handling of invalid, incomplete, or quota-limited responses.
-- **Persistent, user-scoped memory:** PostgreSQL checkpoints use a storage key derived from both the authenticated user and public thread ID. Another user cannot select the same checkpoint merely by reusing a client thread ID.
-- **Langfuse v4 tracing:** request traces, child node spans, conversation sessions, and configurable input/output capture, with tracing failures kept separate from request failures.
-- **A deployed application:** Next.js 16 / React 19 on Vercel, a Dockerized FastAPI backend on Render, and PostgreSQL with pgvector on Neon.
-- **Automated verification:** unit and integration tests, an isolated database runner, Windows-compatible checkpoint testing, and CI that selects complete test suites.
-
-## How answers are grounded
-
-### Numerical questions
-
-For a supported annual metric, the agent resolves the company and fiscal year, retrieves an XBRL fact, and formats its value. In the configured Groq path, formatting a single numerical fact does **not** require an additional answer-generation call.
-
-The citation gate parses the claim's number and compares it with the source's `Decimal` value using **exact equality**. A rounded or mismatched value fails that check.
-
-<details>
-<summary>Supported numerical concepts</summary>
-
-| Concept key | Meaning |
-|---|---|
-| `revenue` | Revenue |
-| `net_income` | Net income or loss |
-| `rnd` | Research and development expense |
-| `total_assets` | Total assets |
-| `total_debt` | Long-term debt under the current XBRL mapping |
-| `cash` | Cash and cash equivalents |
-| `eps_diluted` | Diluted earnings per share |
-| `shares_out` | Common shares outstanding |
-| `opex` | Operating expenses |
-| `gross_profit` | Gross profit |
-
-The whitelist is defined in [`backend/app/data/xbrl.py`](backend/app/data/xbrl.py). Availability depends on the facts loaded for the company and year.
-
-</details>
-
-### Qualitative questions
-
-The agent searches the supported filing sections:
-
-- **Item 1A:** Risk Factors
-- **Item 7:** Management's Discussion and Analysis
-- **Item 8:** Financial Statements and Supplementary Data
-
-Retrieval combines pgvector cosine search with PostgreSQL full-text search, fused using **Reciprocal Rank Fusion**. Compound questions can produce additional search queries. An explicit fiscal year restricts retrieval to the resolved filing, and the merged evidence set is capped before validation.
-
-In the configured Groq path, the model selects evidence identifiers; Python copies the selected source wording into claims. Citation checks then validate source alignment and assemble numbered citation markers.
-
-**Citation support is not the same as completeness or relevance.** A passage can be genuinely present in a filing while still answering only part of a question.
+Year-over-year and cross-company questions are explicit **non-goals** for the MVP.
 
 ## Architecture
 
-### Ingestion and storage
+Two parallel data pipelines feed one LangGraph agent:
 
-Two data paths feed the same PostgreSQL database:
+1. **Prose pipeline** — EDGAR HTML → `edgartools` section extraction (Item 1A / 7 / 8) → sliding-window chunks (~500 tokens) → Gemini `gemini-embedding-2` (1,536 dimensions) → pgvector. Retrieval is cosine similarity restricted to a single `(company, item)` and uses hybrid semantic + PostgreSQL full-text search fused with Reciprocal Rank Fusion, plus multi-query decomposition for compound questions.
+2. **XBRL pipeline** — `data.sec.gov` company-facts JSON → structured rows. Numbers are **never** taken from prose chunks — only from XBRL. The cite-check node enforces this with exact-equality on numerical claims.
 
-| Path | Processing | Stored evidence |
-|---|---|---|
-| Filing prose | SEC EDGAR HTML → section extraction with regex fallback → overlapping token chunks → Gemini embeddings | Filing metadata, text, offsets, section labels, and vectors |
-| Numerical facts | SEC company-facts JSON → annual US-GAAP whitelist extraction | Decimal values, units, fiscal years, and accession numbers |
-
-The configured universe contains 50 tickers. The **29 October 2026 deployed-data snapshot** contained 5 companies, 15 filings, 1,358 embedded chunks, and 343 XBRL facts. Those are deployment snapshot counts, not a claim of complete universe coverage.
-
-### Request workflow
+### Agent graph (LangGraph)
 
 ```mermaid
 flowchart TD
-    P["Plan: classify question and resolve follow-up"] -->|Filing question| A["Anonymous access gate"]
-    P -->|Greeting or capability question| M["Concierge"]
-    P -->|Unsupported request| X["Refusal composer"]
-    A --> F["Resolve company and filing"]
-    F --> L["Locate required source"]
-    L --> R["Retrieve XBRL fact or filing passages"]
-    R --> V["Check answer cache; construct claims"]
-    V -->|Verified cached answer| E["Return response"]
-    V -->|New claims| C["Check numbers and citations"]
-    C -->|Accepted| E
-    C -->|Rejected| X
+    P["Plan"] -->|Filing question| A["Access gate and filing resolution"]
+    A --> L["Locate source"]
+    L --> R["Retrieve evidence"]
+    R --> V["Cache lookup and validation"]
+    V -->|New claims| C["Citation check"]
+    V -->|Verified cache hit| E["Return response"]
+    C -->|Supported| E
+    C -->|Unsupported| X["Refusal composer"]
+    P -->|META| M["Concierge"]
+    P -->|REFUSE| X
     M --> E
     X --> E
 ```
 
-Source, access, and scope gates can also route to refusal. The graph implementation is in [`backend/app/agent/graph.py`](backend/app/agent/graph.py).
+Access and source gates can also route to refusal. Groq-hosted `openai/gpt-oss-20b` handles planning and refusal composition; `openai/gpt-oss-120b` handles qualitative evidence selection. Numerical formatting in the Groq path uses Python. Every graph node is wrapped in a Langfuse span under a root `/ask` trace.
 
-### Deployment
+### Tech stack
 
-| Component | Technology | Hosting |
-|---|---|---|
-| Browser application | Next.js 16.4.3, React 19, TypeScript | Vercel |
-| API and agent | Python 3.12, FastAPI, LangGraph | Render |
-| Evidence and checkpoints | PostgreSQL, pgvector, SQLAlchemy, Alembic, Psycopg | Neon |
-| Chat inference | Groq-hosted `openai/gpt-oss-20b` and `openai/gpt-oss-120b` | Groq |
-| Embeddings | `gemini-embedding-2`, 1,536 output dimensions | Google |
-| Authentication | Clerk sessions and backend JWT verification | Clerk |
-| Observability | Langfuse v4 traces and sessions | Langfuse Cloud |
+- **Backend:** Python · `uv` · FastAPI · LangGraph · SQLAlchemy · Alembic
+- **Storage:** Postgres + `pgvector` (chunks, XBRL facts, query log, answer cache, optional LangGraph checkpointer)
+- **Embeddings / LLMs:** Gemini embeddings · Groq inference (allowlisted per-request model overrides); OpenAI / Anthropic adapters remain available
+- **Frontend:** Next.js 16.4.3 (App Router) on Vercel, Clerk auth
+- **Observability:** Langfuse v4; request traces, node spans, and conversation sessions; optional until credentials are configured
+- **Deploy targets:** Render (Dockerized FastAPI) · Neon (PostgreSQL + pgvector) · Vercel (Next.js)
+- **Streaming:** SSE from FastAPI through the Next.js proxy. Verified answer text is released after citation checking and animated by the UI; refusal and concierge responses can stream tokens.
+- **Authentication:** Clerk JWT verification with user-scoped PostgreSQL conversation checkpoints
 
-Provider names are model identifiers; `openai/gpt-oss-*` requests in this configuration are served through **Groq**.
+Operating cost depends on hosting plans, provider quotas, and usage. Free-tier limits and cold starts apply.
 
-## Memory, tracing, and streaming
+## Repository layout
 
-**Conversation memory.** Signed-in requests can resume a PostgreSQL-backed LangGraph thread. History stores compact prior-turn summaries for follow-up resolution. Retrieved chunks, claims, and numerical facts are reset between turns so earlier evidence is not silently reused as new grounding. Memory becomes stateless if checkpoint initialization is unavailable; anonymous requests remain stateless.
+```
+sec-10k-agent/
+├── README.md, .env.example, docker-compose.yml
+├── backend/                  # FastAPI + LangGraph
+│   ├── pyproject.toml        # uv-managed; dev extras: pytest, ruff, mypy
+│   ├── alembic/              # migrations (0001…0005)
+│   ├── scripts/              # ingest_universe.py, seed_dev.py, smoke_edgar.py, prune_checkpoints.py
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── api/              # routes, schemas, auth, token_budget, anon_quota, usage_tracker
+│   │   ├── agent/            # graph.py, state.py, prompts.py, tools.py, nodes/*
+│   │   ├── data/             # edgar_client.py, parser.py, chunker.py, embedder.py, xbrl.py, ingestion.py, db.py, models.py
+│   │   ├── observability/    # Langfuse wiring
+│   │   └── settings.py       # pydantic-settings
+│   └── tests/                # unit / integration (live marker opt-in)
+├── frontend/                 # Next.js 16.4.3 + React 19
+│   ├── app/                  # page.tsx, companies/, layout.tsx
+│   │   └── api/{ask,companies,health}/route.ts   # server-side proxies; hold API key + Clerk JWT
+│   ├── components/           # AnswerText, FollowUps, Sidebar, SourceCard, Thinking, LimitModal, AuthControl
+│   └── lib/types.ts
+├── evals/                    # golden_dataset.json, adversarial.json, run_evals.py, judge.py, metrics.py
+├── backend/config/tickers.csv  # 50-company demo universe (inside backend/ so it ships in the Docker image)
+└── .github/workflows/        # backend, database, and frontend checks
+```
 
-**User isolation.** The public thread ID is combined with the authenticated user ID to derive the checkpoint key. Separate users and new threads are tested for isolation. Configurable checkpoint cleanup uses `CHECKPOINT_TTL_DAYS`; the current default is seven days.
+The same Pydantic models defined in `backend/app/agent/state.py` are reused by `backend/app/api/schemas.py` — they are not duplicated.
 
-**Tracing.** Each `/ask` request creates a root trace and graph-node spans. Conversation turns share a Langfuse session. `LANGFUSE_CAPTURE_IO` controls question/answer capture; `EXPOSE_TRACE_URLS` separately controls whether trace links reach API clients.
+## API
 
-**Streaming.** FastAPI supports Server-Sent Events, and the Next.js server route forwards them to the browser. Verified answers are released after citation checking; the UI animates that final text. Refusal and concierge responses can stream token events. This is not a claim that unverified answer tokens are streamed directly to users.
+| Method | Path          | Purpose |
+|--------|---------------|---------|
+| `POST` | `/ask`        | Answer a question — SSE stream (default) or sync JSON (`Accept: application/json`). Optional `thread_id` for opt-in conversation memory; optional `plan_model_override` / `validate_model_override` (whitelist-gated). |
+| `GET`  | `/companies`  | List ingested universe (ticker, name, sector) |
+| `GET`  | `/companies/stats` | Corpus statistics; authenticated user or server-side API key |
+| `GET`  | `/health`     | Liveness + DB + graph compilation check (no auth) |
 
-**Caching.** The answer-cache key incorporates the effective question, classification, company/year, source identifiers or values, and model configuration. Previously verified cache entries can bypass answer construction and citation checking.
+### Identity & limits on `/ask`
 
-## Run locally
+`/ask` resolves an `Identity(tier, key)` per request:
 
-Tested with **Python 3.12, Node.js 24, uv, and Docker Desktop / Compose**. Docker is needed for the local PostgreSQL service.
+- `tier="user"` when a valid Clerk JWT (`Authorization: Bearer …`) verifies against Clerk's JWKS. Present-but-invalid tokens → **401** (no silent downgrade).
+- `tier="anon"` otherwise; key is the remote IP.
 
-### 1. Clone and configure
+Defaults (env-configurable, in-process sliding window):
+
+| Tier  | Reqs/min | Tokens/min | Max input tokens |
+|-------|----------|------------|------------------|
+| anon  | 5        | 5 000      | 1 000            |
+| user  | 60       | 50 000     | 2 000            |
+
+The limits above apply when the token limiter is enabled; the development template disables it. Anonymous users also have an optional lifetime per-IP request cap and a configured ticker allowlist (AAPL, MSFT, GOOGL, AMZN, NVDA). 413 / 429 responses share a single shape with `reason`, `auth_required`, and `limit: {used, budget, window_s}` so the frontend can branch between sign-in modal and toast.
+
+`/companies` keeps the legacy `X-API-Key` header path; the browser never holds the API key — the Next.js route proxies and injects it server-side.
+
+## Local development
+
+Clone [AmitaKashid/sec-10k-agent](https://github.com/AmitaKashid/sec-10k-agent). Use Python 3.12, uv, Node.js 24, and Docker Desktop / Compose.
 
 ```bash
 git clone https://github.com/AmitaKashid/sec-10k-agent.git
 cd sec-10k-agent
 ```
 
-Copy the environment templates:
-
-<details open>
-<summary>Windows CMD</summary>
+Windows CMD — copy and fill the environment files:
 
 ```bat
 copy .env.example .env
 copy frontend\.env.example frontend\.env.local
 ```
 
-</details>
+On macOS/Linux, use `cp .env.example .env` and `cp frontend/.env.example frontend/.env.local`.
 
-<details>
-<summary>macOS / Linux</summary>
-
-```bash
-cp .env.example .env
-cp frontend/.env.example frontend/.env.local
-```
-
-</details>
-
-Fill the private files before starting the application:
-
-| File | Configure |
-|---|---|
-| Root `.env` | Your real `SEC_USER_AGENT` contact email, `GROQ_API_KEY`, and `GEMINI_API_KEY`; retain the Gemini/Groq model settings in the template |
-| Root `.env` | `CLERK_ISSUER`, `CLERK_JWKS_URL`, and `CLERK_AUTHORIZED_PARTIES` for the same Clerk application used by the frontend |
-| `frontend/.env.local` | `FASTAPI_URL=http://127.0.0.1:8000`, Clerk publishable/secret keys, and the matching backend `API_KEY` |
-
-For local Clerk authentication, include `http://localhost:3000` in the backend's authorized-party configuration. Keep secrets out of Git and never expose backend secrets through `NEXT_PUBLIC_` variables. The `ci-tests@example.com` placeholder is for offline tests, not real SEC ingestion.
-
-### 2. Start PostgreSQL, migrate, and ingest the demo data
-
-From the repository root:
+Set your real SEC contact email, Gemini and Groq keys in the root `.env`. Configure the same Clerk application in both environment files. Set `FASTAPI_URL=http://127.0.0.1:8000` in `frontend/.env.local`; match its private `API_KEY` to the backend. Include `http://localhost:3000` in `CLERK_AUTHORIZED_PARTIES` for local sign-in.
 
 ```bash
+# From the repository root: database, migrations, demo ingestion
 docker compose up -d postgres
 cd backend
 uv sync --frozen --extra dev
 uv run alembic upgrade head
 uv run python -m scripts.seed_dev --concurrency 1
+
+# Start the API from backend/
+uv run uvicorn app.main:app --reload
 ```
 
-Seeding downloads real filings and requests embeddings. Duration and quota requirements vary; it is not part of the offline test suite. To ingest the configured universe later, use `uv run python -m scripts.ingest_universe --concurrency 1` from `backend/`.
-
-### 3. Start the API
-
-From `backend/`:
-
-```bash
-uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
-```
-
-### 4. Start the frontend in another terminal
-
-From `frontend/`:
+In another terminal, from `frontend/`:
 
 ```bash
 npm ci
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Check the backend at [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health).
+Open [localhost:3000](http://localhost:3000). Seeding makes real SEC and embedding requests; completion time depends on the corpus, network, and provider quotas.
 
-<details>
-<summary>Enable persistent memory locally, including on Windows</summary>
+### Backend commands (run from `backend/`)
 
-The example environment starts with checkpointing disabled. To enable it, set `LANGGRAPH_CHECKPOINTER_ENABLED=true`, configure Clerk, and use a signed-in conversation.
+| Task | Command |
+|---|---|
+| Install | `uv sync --extra dev` |
+| Run API | `uv run uvicorn app.main:app --reload` |
+| Lint | `uv run ruff check .` |
+| Format check | `uv run ruff format --check .` |
+| Type check | `uv run mypy app` |
+| Tests (default) | `uv run --extra dev python scripts/run_tests.py --suite unit` |
+| Database integration | `uv run --extra dev python scripts/run_tests.py --suite database` |
+| Live tests (real EDGAR/LLMs) | `uv run --extra dev python scripts/run_tests.py --suite live` — opt-in only |
+| Migrations | `uv run alembic upgrade head` |
+| Ingest universe | `uv run python -m scripts.ingest_universe --concurrency 1` |
+| Evals (from repo root) | `uv run --project backend python -m evals.run_evals` |
 
-On Windows, the Linux backend container avoids Psycopg's native Windows event-loop restriction. Stop any API already using port 8000, then run these commands from the repository root while the PostgreSQL container is running:
+### Frontend commands (run from `frontend/`)
 
-```bash
-docker build -t sec-10k-backend ./backend
-docker run --rm -p 8000:8000 --env-file .env -e DATABASE_URL=postgresql+asyncpg://sec_agent:dev_only@host.docker.internal:5433/sec_agent -e LANGGRAPH_CHECKPOINTER_ENABLED=true sec-10k-backend
-```
+| Task | Command |
+|---|---|
+| Install | `npm ci` |
+| Dev | `npm run dev` |
+| Production build (also typechecks) | `npm run build` |
+| Start built | `npm run start` |
+| Type check | `npm run typecheck` |
+| Lint | `npm run lint` |
+| Dependency audit | `npm audit` |
 
-The `dev_only` credentials shown here are the local Compose defaults. The application container reaches that local database through Docker Desktop's host address. Do not use these development credentials for hosted databases.
+### Verification status
 
-</details>
+The latest reported local run on **30 October 2026** passed **347 unit/evaluation-logic tests** and **29 PostgreSQL integration tests**: **376 selected tests total**. Two corpus checks and two live-service checks were deselected from those standard runs. Standard suites mock external model/service calls; database integration uses real PostgreSQL.
 
-## API
+GitHub Actions runs the offline backend suite, PostgreSQL/pgvector integration tests, and frontend typecheck/lint. The test runner handles Windows selector-event-loop compatibility and validates the isolated `_test` database. Browser end-to-end verification remains manual.
 
-| Method | Endpoint | Behavior |
-|---|---|---|
-| `POST` | `/ask` | SSE by default; JSON with `Accept: application/json`. Accepts a question, optional thread ID, and allowlisted model overrides |
-| `GET` | `/companies` | Ingested companies and coverage metadata; signed-in users or the administrative API-key path |
-| `GET` | `/companies/stats` | Corpus statistics with the same access requirements |
-| `GET` | `/health` | Database connectivity and graph availability |
+## Configuration
 
-### Example request
+All backend config flows through `app/settings.py` (pydantic-settings, reads `.env`). Key vars:
 
-Windows CMD:
+- `DATABASE_URL` — Postgres (with `pgvector`); only thing that differs between local and Neon / Render
+- `SEC_USER_AGENT` — required; SEC rejects requests without contact info
+- `GROQ_API_KEY`, `GEMINI_API_KEY` — configured chat and embedding providers; paid OpenAI/Anthropic credentials are not required for this configuration
+- `PLAN_MODEL`, `VALIDATE_MODEL`, `REFUSAL_MODEL`, `ALLOWED_MODELS` — Groq model selection
+- `EMBEDDING_PROVIDER=gemini`, `GEMINI_EMBEDDING_MODEL=gemini-embedding-2` — 1,536-dimensional embeddings
+- `API_KEY`, `RATE_LIMIT_PER_MINUTE` — backend auth + coarse slowapi limit
+- `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST` — leave unset to no-op
+- `LANGGRAPH_CHECKPOINTER_ENABLED` — PostgreSQL conversation memory for authenticated users; disabled in the example environment; falls back to stateless operation if initialization fails
+- `CHECKPOINT_TTL_DAYS` — checkpoint cleanup age, default seven days
+- `LANGFUSE_CAPTURE_IO` — controls whether question/answer content is sent to Langfuse
+- `EXPOSE_TRACE_URLS` — dev/demo true, prod false
+- `ANON_LIFETIME_ENABLED`, `ANON_LIFETIME_LIMIT`, `ANON_HASH_SALT`, `ANON_TICKER_ALLOWLIST` — anonymous-tier hardening
 
-```bat
-curl.exe -X POST "https://sec-10k-backend.onrender.com/ask" -H "Content-Type: application/json" -H "Accept: application/json" -d "{\"question\":\"What was Microsoft's total revenue in fiscal year 2025?\"}"
-```
+All EDGAR HTTP **must** go through `app/data/edgar_client.py` (token-bucket limiter at 5 req/s, half the 10 req/s SEC ceiling). Never call `requests.get` against EDGAR directly.
 
-Excerpt from a verified smoke-test response:
+## Caching
 
-```json
-{
-  "question_type": "A_numerical",
-  "answer": "MSFT's revenue was $281,724,000,000 [1].",
-  "verified": true,
-  "refused": false,
-  "ticker": "MSFT",
-  "fiscal_year": 2025,
-  "thread_id": null
-}
-```
+- Ticker→CIK map: in-memory, refreshed daily
+- Submissions feed: on-disk, short TTL
+- Filing HTML: on-disk, **never invalidated** (filings are immutable once filed; keyed by accession number)
+- Embeddings: persisted forever in pgvector for the same reason
+- Answer cache: Postgres `answer_cache` table, exact-match on `(question_normalized, type, cik, fiscal_year, sources_hash)`; lookup point is between Retrieve and Validate
+- Conversation memory (opt-in): LangGraph `AsyncPostgresSaver`, keyed by a hash of authenticated user ID and client thread ID. Anonymous requests remain stateless. New threads use new identifiers, and retrieved evidence resets between turns.
 
-The complete response also includes a request ID and structured claims with source references. For persistent follow-ups, use a valid Clerk bearer token and reuse the same `thread_id`. Sending a thread ID alone does not authenticate a request or enable anonymous memory.
+## Evals
 
-Unsupported domain questions normally return a successful HTTP response with `refused=true` and structured refusal fields. Authentication, input-size, and usage-limit failures use HTTP error statuses such as **401, 403, 413, and 429**.
+`evals/` contains golden and adversarial datasets, an LLM-as-judge, and citation, refusal, numerical, unsupported-claim, retrieval, and latency metrics. Unit tests of this machinery run in CI; a complete live answer-quality benchmark does not.
 
-## Tests and CI
+A historical run on **27 October 2026** evaluated **six qualitative golden questions** across four companies:
 
-**Latest reported local run — 30 October 2026:**
-
-| Suite | Result | What it checks |
-|---|---|---|
-| Unit and evaluation-logic tests | **347 passed** | Authentication, limits, usage accounting, parsing, chunking, ingestion orchestration, provider adapters, graph nodes, memory boundaries, citations, logging, and evaluation calculations |
-| PostgreSQL integration | **29 passed** | Migrations, schema constraints, vector search, real graph/API database paths, checkpoint persistence after reconnecting, and user isolation |
-| Total selected automated tests | **376 passed** | Software behavior under the selected test conditions |
-
-Database integration tests use real PostgreSQL; model and external-service calls are mocked in the standard suites. Two real-filing corpus checks are excluded from the unit run, and two live-service checks are excluded from the database run. **Test counts are not an answer-accuracy benchmark.**
-
-Run from `backend/`:
-
-```bash
-uv run --extra dev python scripts/run_tests.py --suite unit
-uv run --extra dev python scripts/run_tests.py --suite database
-```
-
-The database runner checks that the target is a separate database with a name ending in `_test`, requires it to be reachable, and rejects skipped database checks. It configures the compatible selector event loop on Windows.
-
-Run frontend checks from `frontend/`:
-
-```bash
-npm run typecheck
-npm run lint
-npm run build
-npm audit
-```
-
-GitHub Actions runs the complete offline backend/evaluation suite, a separate database job using PostgreSQL with pgvector, and frontend TypeScript/ESLint checks. Dependabot is configured for scheduled frontend and GitHub Actions dependency-update PRs.
-
-<details>
-<summary>Opt-in live and downloaded-filing checks</summary>
-
-From `backend/`:
-
-```bash
-uv run --extra dev python scripts/run_tests.py --suite live
-uv run --extra dev python scripts/run_tests.py --suite corpus
-```
-
-Live checks require private Groq/Gemini keys, a valid SEC contact email, and the isolated test database. They make real external requests and consume provider quota. Corpus checks require real filing HTML fixtures under `backend/tests/fixtures/10ks/`. Neither category runs automatically in the standard CI suites.
-
-</details>
-
-## Evaluation evidence
-
-A historical qualitative run on **27 October 2026** evaluated six golden questions across four companies:
-
-| Measurement | Reported result |
+| Metric | Observed result |
 |---|---:|
-| Qualitative questions evaluated | 6 |
-| Citation accuracy within that sample | 100% |
-| Claims assessed by the LLM judge | 30 |
-| Claims judged unsupported | 0 / 30 |
+| Citation accuracy | 100% within this sample |
+| Unsupported claims, as assessed by the judge | 0 / 30 |
 | Reported median graph latency | 10,308 ms |
 
-This was a small, in-process evaluation, not a hosted latency benchmark or a fresh evaluation of every subsequent revision. The judge used the same model family as the configured validation stage, so its assessment was not independent. The harness also selects the upper middle observation for an even-sized median.
+This sample contained **no numerical or adversarial questions**. It does not establish numerical accuracy, adversarial refusal reliability, or general production performance. The judge shared the validation model family; the latency measurement was in-process rather than browser-to-hosted-service. Full live evaluation is deferred and remains a project limitation.
 
-**There were no numerical or adversarial examples in that run.** It therefore establishes neither numerical accuracy nor adversarial refusal accuracy. Broader live numerical, multi-turn, and adversarial evaluation is deferred; these sample results must not be generalized to all questions.
+## Deployment status
 
-The datasets, judge, and metric implementations are available in [`evals/`](evals/).
+- **Frontend:** [sec-10k-agent-three.vercel.app](https://sec-10k-agent-three.vercel.app/)
+- **Backend:** [sec-10k-backend.onrender.com](https://sec-10k-backend.onrender.com/health)
+- **Database:** Neon PostgreSQL + pgvector
+- **Memory:** authenticated follow-ups and persistence across backend restarts verified
+- **Observability:** live Langfuse v4 traces and conversation sessions verified
 
-## Deployment and configuration
+Render builds from `backend/`; Vercel uses `frontend/`. The Docker image runs as a non-root user, applies migrations at startup, and listens on the platform's `PORT`.
 
-| Service | Main settings |
-|---|---|
-| Vercel | Project root `frontend`; backend URL and private Clerk/API settings |
-| Render | Docker build context `backend`; `/health` health-check path; provider, database, Clerk, and tracing variables |
-| Neon | PostgreSQL with the `vector` extension and Alembic migrations |
+The verified Linux-container Neon TLS configuration uses `?ssl=verify-full` in the asyncpg database URL and `PGSSLROOTCERT=/etc/ssl/certs/ca-certificates.crt` as a separate environment variable. Keep database credentials and provider/Clerk secrets in private environment settings.
 
-The backend Docker image installs CA certificates, runs as a non-root user, applies Alembic migrations at startup, and binds Uvicorn to the platform's `PORT`.
+## Scope (explicitly out of MVP)
 
-For the Linux container's verified Neon TLS configuration:
+International filings · real-time prices · earnings call transcripts · year-over-year calculations · cross-company comparison · unsupported numerical concepts · sharded Postgres · Redis · background queues.
 
-```dotenv
-DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@HOST/neondb?ssl=verify-full
-PGSSLROOTCERT=/etc/ssl/certs/ca-certificates.crt
-```
+The configured universe contains **50 tickers**, but coverage depends on actual ingestion. The **29 October 2026 deployment snapshot** contained 5 companies, 15 filings, 1,358 chunks, and 343 XBRL facts. Older fiscal years are not automatically available.
 
-Configure optional memory and tracing privately in the backend environment:
+### Limitations
 
-```dotenv
-LANGGRAPH_CHECKPOINTER_ENABLED=true
-CHECKPOINT_TTL_DAYS=7
-LANGFUSE_PUBLIC_KEY=your-project-public-key
-LANGFUSE_SECRET_KEY=your-project-secret-key
-LANGFUSE_HOST=https://cloud.langfuse.com
-LANGFUSE_CAPTURE_IO=true
-EXPOSE_TRACE_URLS=false
-```
+- Full numerical, adversarial, and multi-turn live evaluation remains pending.
+- A supported citation does not prove the answer is complete or the evidence selection is correct.
+- Persistent memory requires sign-in and an initialized checkpointer; it supplies conversational context, not new financial evidence.
+- Request/token windows are per process, not distributed quota accounting.
+- Free hosting can introduce cold starts; provider quotas can delay or interrupt requests.
+- The automated suite does not include browser end-to-end tests.
 
-`LANGFUSE_CAPTURE_IO=true` sends question/answer text to the configured tracing service. Set it to `false` when content capture is not wanted. Restrict `CLERK_AUTHORIZED_PARTIES` to the frontend origins you intend to accept. Configure usage limits for the hosting and provider quotas you actually have; the checked-in development template disables several limits.
+## Documentation
 
-Configuration is defined in [`backend/app/settings.py`](backend/app/settings.py), with a Gemini/Groq example in [`.env.example`](.env.example).
-
-## Repository guide
-
-| Location | Responsibility |
-|---|---|
-| [`backend/app/agent/`](backend/app/agent/) | Graph, shared state, prompts, Groq runtime, retrieval tools, memory keys, and node implementations |
-| [`backend/app/data/`](backend/app/data/) | EDGAR access, parsing, chunking, embeddings, XBRL extraction, ingestion, and database models |
-| [`backend/app/api/`](backend/app/api/) | Request/response schemas, identity, usage limits, and API routes |
-| [`backend/app/observability/`](backend/app/observability/) | Langfuse integration and structured logging |
-| [`backend/alembic/`](backend/alembic/) | Database migrations |
-| [`backend/scripts/`](backend/scripts/) | Ingestion, checkpoint cleanup, smoke checks, and the test runner |
-| [`backend/tests/`](backend/tests/) | Unit and integration suites |
-| [`frontend/`](frontend/) | Chat interface, company browser, source cards, Clerk integration, and server-side API proxies |
-| [`evals/`](evals/) | Evaluation datasets, runner, judge, metrics, and tests |
-| [`.github/workflows/`](.github/workflows/) | Backend, database, and frontend CI |
-
-## Scope and limitations
-
-- **Bounded research scope:** US SEC 10-K filings, the supported annual concepts, and Items 1A / 7 / 8. No real-time prices, earnings-call analysis, cross-company comparison, or year-over-year calculations.
-- **Corpus availability:** answers depend on the filings actually ingested. The default seed targets five companies and recent fiscal years; older years and the full configured universe are not automatically present.
-- **Limited quality evaluation:** six qualitative questions do not establish general accuracy, complete answers, robust refusals, or production latency.
-- **Evidence checks have limits:** exact numbers and source-aligned quotations reduce specific failure modes; they do not prove every interpretation or evidence selection is correct.
-- **Hosting and provider constraints:** idle-service cold starts and provider quotas can add delay or interrupt requests. No fixed latency or always-free operation is promised.
-- **Memory is conditional:** persistent follow-ups require sign-in and an active checkpointer. They are conversation continuity, not a source of financial evidence.
-- **Usage limits are per process:** the in-memory request/token windows are not distributed quota accounting. The optional database-backed anonymous lifetime cap is separately configurable.
-- **Browser verification is manual:** sign-in, questions, follow-ups, and new-thread behavior were smoke-tested; the automated suite does not include browser end-to-end tests.
-
-Use the linked filing and its reporting context when interpreting an answer. This is a research/demo application, not financial advice.
+- [`backend/app/agent/graph.py`](backend/app/agent/graph.py) — graph routing and node execution
+- [`backend/app/settings.py`](backend/app/settings.py) — configuration and defaults
+- [`backend/scripts/run_tests.py`](backend/scripts/run_tests.py) — test suites and database safeguards
+- [`evals/`](evals/) — evaluation datasets, runner, judge, and metrics
+- [`.github/workflows/`](.github/workflows/) — continuous integration
 
 ## Maintainer
 
-**[Amita Kashid](https://github.com/AmitaKashid)**
-
-[GitHub repository](https://github.com/AmitaKashid/sec-10k-agent) · [Live application](https://sec-10k-agent-three.vercel.app/)
+[Amita Kashid](https://github.com/AmitaKashid)
