@@ -1,0 +1,20 @@
+# Keep the image small + the build context fast to upload.
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+.env
+.env.*
+*.log
+data_cache/
+tests/
+htmlcov/
+.coverage
+.git/
+.gitignore
+.DS_Store
