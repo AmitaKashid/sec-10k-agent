@@ -50,6 +50,10 @@ jobs:
             tests/unit/test_groq_runtime.py \
             tests/unit/test_memory_config.py \
             tests/unit/test_langfuse_v4.py \
+            tests/unit/test_node_retrieve.py \
+            tests/unit/test_node_validate.py \
+            tests/unit/test_node_cite_check.py \
+            tests/unit/test_xbrl.py \
             tests/unit/test_graph_followup_grounding.py \
             tests/unit/test_history_reducer.py \
             tests/unit/test_state_reset_defaults.py \
