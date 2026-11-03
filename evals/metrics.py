@@ -16,6 +16,7 @@ Metrics computed (per CLAUDE.md DoD):
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any, Literal
@@ -163,45 +164,42 @@ def score_citation(expected: Expected, state: dict[str, Any]) -> tuple[bool, str
     return True, "ok"
 
 
-def score_numeric(expected: Expected, state: dict[str, Any]) -> tuple[bool, str]:
-    """Did the agent surface a value within tolerance of expected.value?
+_ANSWER_AMOUNT = re.compile(
+    r"(?<![\w.,])([+-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)"
+    r"(?:\s*(thousand|million|billion|trillion)\b)?(?![\w]|[.,]\d)",
+    re.IGNORECASE,
+)
+_AMOUNT_SCALE = {"": 1, "thousand": 10**3, "million": 10**6,
+                 "billion": 10**9, "trillion": 10**12}
 
-    Source of truth is state.xbrl_fact (the structured fact retrieved by
-    the agent). If absent, fall back to any number-claim's source_ref.
+
+def score_numeric(expected: Expected, state: dict[str, Any]) -> tuple[bool, str]:
+    """Score the single displayed amount against the independent label.
+
+    Explicit fiscal-year labels and numbered citations are not amounts.
+    Missing or ambiguous amounts fail rather than falling back to retrieval.
     """
     if expected.value is None:
         return True, "no expected value"
 
-    fact = state.get("xbrl_fact")
-    fact_val: Decimal | None = None
-    fact_accn: str | None = None
-    if fact is not None:
-        if hasattr(fact, "value"):
-            fact_val = Decimal(str(fact.value))
-            fact_accn = getattr(fact, "accession_no", None)
-        elif isinstance(fact, dict):
-            fact_val = Decimal(str(fact["value"])) if "value" in fact else None
-            fact_accn = fact.get("accession_no")
+    answer = state.get("final_answer")
+    if not isinstance(answer, str) or not answer.strip():
+        return False, "no final numerical answer"
 
-    if fact_val is None:
-        for s in _claim_sources(state):
-            if "value" in s:
-                fact_val = Decimal(str(s["value"]))
-                fact_accn = s.get("accession_no")
-                break
+    text = re.sub(r"\[\d+\]|\bFY\s*\d{4}\b|\bfiscal year\s+\d{4}\b",
+                  " ", answer, flags=re.IGNORECASE)
+    amounts = _ANSWER_AMOUNT.findall(text.replace("−", "-").replace("$", ""))
+    if len(amounts) != 1 or "%" in text:
+        return False, "expected one unambiguous amount in the final answer"
 
-    if fact_val is None:
-        return False, "no xbrl value surfaced"
-
-    expected_val = Decimal(str(expected.value))
-    if expected_val == 0:
-        ok = fact_val == 0
-    else:
-        diff_pct = abs(fact_val - expected_val) / abs(expected_val) * Decimal(100)
-        ok = diff_pct <= Decimal(str(expected.tolerance_pct))
-
-    note = f"got {fact_val} (accn={fact_accn}), expected {expected_val} ±{expected.tolerance_pct}%"
-    return ok, note
+    number, scale = amounts[0]
+    displayed = Decimal(number.replace(",", "")) * _AMOUNT_SCALE[scale.lower()]
+    target = expected.value
+    allowed_error = abs(target) * Decimal(str(expected.tolerance_pct)) / 100
+    return (
+        abs(displayed - target) <= allowed_error,
+        f"displayed {displayed}, expected {target} ±{expected.tolerance_pct}%",
+    )
 
 
 def score_recall_at_k(
