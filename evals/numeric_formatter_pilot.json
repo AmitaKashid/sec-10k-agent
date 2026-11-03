@@ -1,0 +1,86 @@
+[
+  {
+    "id": "pilot_aapl_2024_revenue",
+    "question": "What was AAPL's revenue in fiscal year 2024?",
+    "pipeline": "xbrl",
+    "ticker": "AAPL",
+    "fiscal_year": 2024,
+    "concept_key": "revenue",
+    "accession": "0000320193-24-000123",
+    "value": "391035000000",
+    "tolerance_pct": 0,
+    "tags": [
+      "numeric",
+      "formatter-pilot"
+    ],
+    "reference": {
+      "unit": "USD",
+      "reported_scale": 1000000,
+      "line_item": "Total net sales",
+      "url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm"
+    }
+  },
+  {
+    "id": "pilot_aapl_2024_gross_profit",
+    "question": "What was AAPL's gross profit in fiscal year 2024?",
+    "pipeline": "xbrl",
+    "ticker": "AAPL",
+    "fiscal_year": 2024,
+    "concept_key": "gross_profit",
+    "accession": "0000320193-24-000123",
+    "value": "180683000000",
+    "tolerance_pct": 0,
+    "tags": [
+      "numeric",
+      "formatter-pilot"
+    ],
+    "reference": {
+      "unit": "USD",
+      "reported_scale": 1000000,
+      "line_item": "Gross margin",
+      "url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm"
+    }
+  },
+  {
+    "id": "pilot_msft_2025_revenue",
+    "question": "What was MSFT's revenue in fiscal year 2025?",
+    "pipeline": "xbrl",
+    "ticker": "MSFT",
+    "fiscal_year": 2025,
+    "concept_key": "revenue",
+    "accession": "0000950170-25-100235",
+    "value": "281724000000",
+    "tolerance_pct": 0,
+    "tags": [
+      "numeric",
+      "formatter-pilot"
+    ],
+    "reference": {
+      "unit": "USD",
+      "reported_scale": 1000000,
+      "line_item": "Revenue",
+      "url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm"
+    }
+  },
+  {
+    "id": "pilot_msft_2025_net_income",
+    "question": "What was MSFT's net income in fiscal year 2025?",
+    "pipeline": "xbrl",
+    "ticker": "MSFT",
+    "fiscal_year": 2025,
+    "concept_key": "net_income",
+    "accession": "0000950170-25-100235",
+    "value": "101832000000",
+    "tolerance_pct": 0,
+    "tags": [
+      "numeric",
+      "formatter-pilot"
+    ],
+    "reference": {
+      "unit": "USD",
+      "reported_scale": 1000000,
+      "line_item": "Net income",
+      "url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm"
+    }
+  }
+]
