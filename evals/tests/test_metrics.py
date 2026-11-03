@@ -162,6 +162,11 @@ def test_zero_numeric_errors_and_low_claim_rate_passes():
     rows[0].judge_supported = True
     rows[0].judge_total_claims = 20
     rows[0].judge_unsupported_count = 0
+    # A passing full gate also needs an evaluated refusal case.
+    rows.append(score_row(
+        Expected(id="r", question="q", pipeline="refuse", should_refuse=True),
+        _state_refused(),
+    ))
     m = aggregate(rows)
     assert m.numeric_error_count == 0
     assert m.unsupported_claim_rate == 0.0

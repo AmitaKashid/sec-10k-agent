@@ -321,29 +321,47 @@ class Metrics:
     n: int
     n_golden: int
     n_adversarial: int
-    citation_accuracy: float
-    # Numeric tripwire components.
+    citation_accuracy: float | None
     numeric_error_count: int
     numeric_eligible: int
-    # Semantic claim-level rate.
-    unsupported_claim_rate: float
+    unsupported_claim_rate: float | None
     total_claims_judged: int
     unsupported_claim_count: int
-    # Derived headline kept for DoD continuity (row-level OR of both signals).
-    hallucination_rate: float
-    refusal_accuracy: float
-    false_refusal_rate: float
+    hallucination_rate: float | None
+    refusal_accuracy: float | None
+    false_refusal_rate: float | None
     median_latency_ms: float | None
-    # Retrieval quality (diagnostic — no threshold, prose/cross rows only)
-    recall_at_5: float | None = None   # fraction of rows where top-5 had a keyword hit
-    recall_at_8: float | None = None   # fraction of rows where top-8 had a keyword hit
+    recall_at_5: float | None = None
+    recall_at_8: float | None = None
+    citation_eligible: int = 0
+    hallucination_eligible: int = 0
+
+    def coverage_gaps(self) -> list[str]:
+        """Required metrics with no observations; subsets remain diagnostic."""
+        gaps = []
+        for name, observed in (
+            ("citation_accuracy", self.citation_accuracy is not None),
+            ("numeric_errors", self.numeric_eligible > 0),
+            ("unsupported_claim_rate", self.unsupported_claim_rate is not None),
+            ("refusal_accuracy", self.refusal_accuracy is not None),
+            ("false_refusal_rate", self.false_refusal_rate is not None),
+        ):
+            if not observed:
+                gaps.append(name)
+        return gaps
 
     def passes(self, t: Thresholds) -> bool:
+        # No observations cannot satisfy a release-quality threshold.
         return (
-            self.citation_accuracy >= t.citation_accuracy
+            self.citation_accuracy is not None
+            and self.citation_accuracy >= t.citation_accuracy
+            and self.numeric_eligible > 0
             and self.numeric_error_count <= t.numeric_errors_max
+            and self.unsupported_claim_rate is not None
             and self.unsupported_claim_rate < t.unsupported_claim_rate
+            and self.refusal_accuracy is not None
             and self.refusal_accuracy >= t.refusal_accuracy
+            and self.false_refusal_rate is not None
             and self.false_refusal_rate <= t.false_refusal_rate
         )
 
@@ -352,12 +370,9 @@ def _safe_div(num: int, den: int) -> float:
     return num / den if den else 0.0
 
 
-def _accuracy(num: int, den: int) -> float:
-    """Accuracy-style metric: vacuous-pass (1.0) when no eligible rows.
-
-    Avoids spurious threshold failures on subsets that contain only one
-    pipeline (e.g. an all-refusal smoke run has 0 cite-eligible rows)."""
-    return num / den if den else 1.0
+def _accuracy(num: int, den: int) -> float | None:
+    """Absent observations are unknown, not perfect (or zero) performance."""
+    return num / den if den else None
 
 
 def aggregate(outcomes: list[RowOutcome]) -> Metrics:
@@ -375,13 +390,13 @@ def aggregate(outcomes: list[RowOutcome]) -> Metrics:
     # Semantic hallucination: claim-level, summed across all judged rows.
     total_claims = sum(o.judge_total_claims or 0 for o in outcomes)
     unsupported_claims = sum(o.judge_unsupported_count or 0 for o in outcomes)
-    unsupported_rate = _safe_div(unsupported_claims, total_claims)
+    unsupported_rate = _accuracy(unsupported_claims, total_claims)
 
     # Headline hallucination_rate (derived, row-level OR — kept for DoD
     # continuity). Eligible = any answered row with at least one signal.
     halluc_eligible = [
         o for o in outcomes
-        if o.numeric_correct is not None or o.judge_total_claims is not None
+        if o.numeric_correct is not None or (o.judge_total_claims or 0) > 0
     ]
     halluc_wrong = sum(
         1 for o in halluc_eligible
@@ -415,12 +430,14 @@ def aggregate(outcomes: list[RowOutcome]) -> Metrics:
         unsupported_claim_rate=unsupported_rate,
         total_claims_judged=total_claims,
         unsupported_claim_count=unsupported_claims,
-        hallucination_rate=_safe_div(halluc_wrong, len(halluc_eligible)),
+        hallucination_rate=_accuracy(halluc_wrong, len(halluc_eligible)),
         refusal_accuracy=_accuracy(refused_ok, len(refusal_eligible)),
-        false_refusal_rate=_safe_div(falsely_refused, len(false_eligible)),
+        false_refusal_rate=_accuracy(falsely_refused, len(false_eligible)),
         median_latency_ms=median,
         recall_at_5=recall_5,
         recall_at_8=recall_8,
+        citation_eligible=len(cite_eligible),
+        hallucination_eligible=len(halluc_eligible),
     )
 
 
@@ -428,43 +445,65 @@ def aggregate(outcomes: list[RowOutcome]) -> Metrics:
 
 
 def format_report(metrics: Metrics, outcomes: list[RowOutcome], t: Thresholds) -> str:
-    def _pct(x: float) -> str:
-        return f"{x * 100:5.1f}%"
+    def pct(value: float | None) -> str:
+        return "NOT EVALUATED" if value is None else f"{value * 100:.1f}%"
 
-    def _mark(ok: bool) -> str:
-        return "PASS" if ok else "FAIL"
+    def result(value: float | None, threshold: float, comparison: str) -> str:
+        if value is None:
+            return "NOT EVALUATED"
+        passed = (
+            value >= threshold if comparison == ">=" else
+            value <= threshold if comparison == "<=" else
+            value < threshold
+        )
+        return f"{pct(value)} [target {comparison} {pct(threshold)}] " + (
+            "PASS" if passed else "FAIL"
+        )
 
+    if metrics.numeric_eligible:
+        numeric = (
+            f"{metrics.numeric_error_count} / {metrics.numeric_eligible} "
+            f"[tripwire: <= {t.numeric_errors_max}] "
+            + ("PASS" if metrics.numeric_error_count <= t.numeric_errors_max else "FAIL")
+        )
+    else:
+        numeric = "NOT EVALUATED (0 eligible rows)"
+
+    gaps = metrics.coverage_gaps()
+    gate = "PASS" if metrics.passes(t) else "FAIL"
+    if gaps:
+        gate += " — incomplete coverage; not evaluated: " + ", ".join(gaps)
     head = [
         "# Eval Report",
         "",
-        f"- rows:                  {metrics.n} ({metrics.n_golden} golden, {metrics.n_adversarial} adversarial)",
-        f"- citation_accuracy:     {_pct(metrics.citation_accuracy)}   "
-        f"[target ≥ {_pct(t.citation_accuracy)}] {_mark(metrics.citation_accuracy >= t.citation_accuracy)}",
-        f"- numeric_errors:        {metrics.numeric_error_count} / {metrics.numeric_eligible}   "
-        f"[tripwire: ≤ {t.numeric_errors_max}] {_mark(metrics.numeric_error_count <= t.numeric_errors_max)}",
-        f"- unsupported_claim_rate:{_pct(metrics.unsupported_claim_rate)}   "
-        f"({metrics.unsupported_claim_count}/{metrics.total_claims_judged} claims) "
-        f"[target < {_pct(t.unsupported_claim_rate)}] "
-        f"{_mark(metrics.unsupported_claim_rate < t.unsupported_claim_rate)}",
-        f"- hallucination_rate:    {_pct(metrics.hallucination_rate)}   [headline, derived row-level]",
-        f"- refusal_accuracy:      {_pct(metrics.refusal_accuracy)}   "
-        f"[target ≥ {_pct(t.refusal_accuracy)}] {_mark(metrics.refusal_accuracy >= t.refusal_accuracy)}",
-        f"- false_refusal_rate:    {_pct(metrics.false_refusal_rate)}   "
-        f"[target ≤ {_pct(t.false_refusal_rate)}] {_mark(metrics.false_refusal_rate <= t.false_refusal_rate)}",
+        f"- rows: {metrics.n} ({metrics.n_golden} golden, {metrics.n_adversarial} adversarial)",
+        f"- quality_gate: {gate}",
+        f"- citation_accuracy: {result(metrics.citation_accuracy, t.citation_accuracy, '>=')} "
+        f"({metrics.citation_eligible} evaluated rows)",
+        f"- numeric_errors: {numeric}",
+        f"- unsupported_claim_rate: "
+        f"{result(metrics.unsupported_claim_rate, t.unsupported_claim_rate, '<')} "
+        f"({metrics.unsupported_claim_count}/{metrics.total_claims_judged} claims)",
+        f"- hallucination_rate: {pct(metrics.hallucination_rate)} "
+        f"[derived row-level diagnostic; {metrics.hallucination_eligible} evaluated rows]",
+        f"- refusal_accuracy: {result(metrics.refusal_accuracy, t.refusal_accuracy, '>=')} "
+        f"({metrics.n_adversarial} evaluated rows)",
+        f"- false_refusal_rate: "
+        f"{result(metrics.false_refusal_rate, t.false_refusal_rate, '<=')} "
+        f"({metrics.n_golden} evaluated rows)",
     ]
     if metrics.median_latency_ms is not None:
-        head.append(f"- median_latency_ms:   {metrics.median_latency_ms:.0f}")
+        head.append(f"- median_latency_ms: {metrics.median_latency_ms:.0f}")
     if metrics.recall_at_5 is not None:
-        head.append(f"- recall_at_5:         {_pct(metrics.recall_at_5)}   [retrieval diagnostic]")
+        head.append(f"- recall_at_5: {pct(metrics.recall_at_5)} [retrieval diagnostic]")
     if metrics.recall_at_8 is not None:
-        head.append(f"- recall_at_8:         {_pct(metrics.recall_at_8)}   [retrieval diagnostic]")
+        head.append(f"- recall_at_8: {pct(metrics.recall_at_8)} [retrieval diagnostic]")
 
     failed = [o for o in outcomes if o.notes]
     if failed:
         head += ["", "## Failures"]
         for o in failed:
             head.append(f"- **{o.id}** ({o.pipeline}): {'; '.join(o.notes)}")
-
     return "\n".join(head) + "\n"
 
 
