@@ -98,6 +98,16 @@ def _format_sources(state: AgentState) -> tuple[str, list[XbrlFact | ChunkHit]]:
     return "\n\n".join(lines), sources
 
 
+def format_numeric_fact(ticker: str | None, fact: XbrlFact) -> str:
+    value = format(fact.value, ",f")
+    if "." in value:
+        value = value.rstrip("0").rstrip(".")
+    display = f"${value}" if fact.unit == "USD" else f"{value} {fact.unit}"
+    if fact.unit == "USD/shares":
+        display = f"${value} per share"
+    return f"{ticker}'s {fact.concept_key.replace('_', ' ')} was {display}."
+
+
 async def validate(state: AgentState) -> dict:
     if state.question_type == "REFUSE":
         return {}
@@ -139,13 +149,7 @@ async def validate(state: AgentState) -> dict:
             if state.question_type == "A_numerical" and state.xbrl_fact:
                 # A single structured fact needs formatting, not generative reasoning.
                 fact = state.xbrl_fact
-                value = format(fact.value, ",f")
-                if "." in value:
-                    value = value.rstrip("0").rstrip(".")
-                display = f"${value}" if fact.unit == "USD" else f"{value} {fact.unit}"
-                if fact.unit == "USD/shares":
-                    display = f"${value} per share"
-                text = f"{state.ticker}'s {fact.concept_key.replace('_', ' ')} was {display}."
+                text = format_numeric_fact(state.ticker, fact)
                 full_claims = [Claim(text=text, kind="number", source_ref=fact)]
             else:
                 chat = get_chat_model(model_name, streaming=False)
