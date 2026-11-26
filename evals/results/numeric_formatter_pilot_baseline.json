@@ -1,0 +1,235 @@
+{
+  "model": "openai/gpt-oss-20b",
+  "summary": {
+    "python": {
+      "correct_amounts": 4,
+      "cases": 4,
+      "attempted": 4,
+      "errors": 0,
+      "generation_invocations": 0,
+      "median_formatting_ms": 0.007849999974496313
+    },
+    "llm": {
+      "correct_amounts": 4,
+      "cases": 4,
+      "attempted": 4,
+      "errors": 0,
+      "generation_invocations": 4,
+      "median_formatting_ms": 350.0468999999953
+    }
+  },
+  "rows": [
+    {
+      "id": "pilot_aapl_2024_revenue",
+      "expected": {
+        "id": "pilot_aapl_2024_revenue",
+        "question": "What was AAPL's revenue in fiscal year 2024?",
+        "pipeline": "xbrl",
+        "ticker": "AAPL",
+        "fiscal_year": 2024,
+        "concept_key": "revenue",
+        "accession": "0000320193-24-000123",
+        "value": "391035000000",
+        "tolerance_pct": 0,
+        "tags": [
+          "numeric",
+          "formatter-pilot"
+        ],
+        "reference": {
+          "unit": "USD",
+          "reported_scale": 1000000,
+          "line_item": "Total net sales",
+          "url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm"
+        }
+      },
+      "fact": {
+        "cik": "0000320193",
+        "concept": "revenue",
+        "concept_key": "revenue",
+        "unit": "USD",
+        "value": "391035000000.0000",
+        "period_end": "2024-09-28",
+        "fiscal_year": 2024,
+        "fiscal_period": "FY",
+        "accession_no": "0000320193-24-000123",
+        "form": "10-K"
+      },
+      "variants": {
+        "python": {
+          "answer": "AAPL's revenue was $391,035,000,000.",
+          "amount_correct": true,
+          "note": "displayed 391035000000, expected 391035000000 ±0.0%",
+          "ms": 0.012500000025283953,
+          "generation_invocations": 0
+        },
+        "llm": {
+          "answer": "AAPL's revenue in fiscal year 2024 was 391035000000.0000 USD.",
+          "amount_correct": true,
+          "note": "displayed 391035000000.0000, expected 391035000000 ±0.0%",
+          "ms": 425.7000000000062,
+          "generation_invocations": 1
+        }
+      },
+      "input_matches_label": true
+    },
+    {
+      "id": "pilot_aapl_2024_gross_profit",
+      "expected": {
+        "id": "pilot_aapl_2024_gross_profit",
+        "question": "What was AAPL's gross profit in fiscal year 2024?",
+        "pipeline": "xbrl",
+        "ticker": "AAPL",
+        "fiscal_year": 2024,
+        "concept_key": "gross_profit",
+        "accession": "0000320193-24-000123",
+        "value": "180683000000",
+        "tolerance_pct": 0,
+        "tags": [
+          "numeric",
+          "formatter-pilot"
+        ],
+        "reference": {
+          "unit": "USD",
+          "reported_scale": 1000000,
+          "line_item": "Gross margin",
+          "url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm"
+        }
+      },
+      "fact": {
+        "cik": "0000320193",
+        "concept": "gross_profit",
+        "concept_key": "gross_profit",
+        "unit": "USD",
+        "value": "180683000000.0000",
+        "period_end": "2024-09-28",
+        "fiscal_year": 2024,
+        "fiscal_period": "FY",
+        "accession_no": "0000320193-24-000123",
+        "form": "10-K"
+      },
+      "variants": {
+        "python": {
+          "answer": "AAPL's gross profit was $180,683,000,000.",
+          "amount_correct": true,
+          "note": "displayed 180683000000, expected 180683000000 ±0.0%",
+          "ms": 0.0073999999585794285,
+          "generation_invocations": 0
+        },
+        "llm": {
+          "answer": "AAPL's gross profit in fiscal year 2024 was 180683000000.0000 USD.",
+          "amount_correct": true,
+          "note": "displayed 180683000000.0000, expected 180683000000 ±0.0%",
+          "ms": 245.9116999999651,
+          "generation_invocations": 1
+        }
+      },
+      "input_matches_label": true
+    },
+    {
+      "id": "pilot_msft_2025_revenue",
+      "expected": {
+        "id": "pilot_msft_2025_revenue",
+        "question": "What was MSFT's revenue in fiscal year 2025?",
+        "pipeline": "xbrl",
+        "ticker": "MSFT",
+        "fiscal_year": 2025,
+        "concept_key": "revenue",
+        "accession": "0000950170-25-100235",
+        "value": "281724000000",
+        "tolerance_pct": 0,
+        "tags": [
+          "numeric",
+          "formatter-pilot"
+        ],
+        "reference": {
+          "unit": "USD",
+          "reported_scale": 1000000,
+          "line_item": "Revenue",
+          "url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm"
+        }
+      },
+      "fact": {
+        "cik": "0000789019",
+        "concept": "revenue",
+        "concept_key": "revenue",
+        "unit": "USD",
+        "value": "281724000000.0000",
+        "period_end": "2025-06-30",
+        "fiscal_year": 2025,
+        "fiscal_period": "FY",
+        "accession_no": "0000950170-25-100235",
+        "form": "10-K"
+      },
+      "variants": {
+        "python": {
+          "answer": "MSFT's revenue was $281,724,000,000.",
+          "amount_correct": true,
+          "note": "displayed 281724000000, expected 281724000000 ±0.0%",
+          "ms": 0.00620000002982124,
+          "generation_invocations": 0
+        },
+        "llm": {
+          "answer": "MSFT's revenue in fiscal year 2025 was 281724000000.0000 USD.",
+          "amount_correct": true,
+          "note": "displayed 281724000000.0000, expected 281724000000 ±0.0%",
+          "ms": 274.8405999999477,
+          "generation_invocations": 1
+        }
+      },
+      "input_matches_label": true
+    },
+    {
+      "id": "pilot_msft_2025_net_income",
+      "expected": {
+        "id": "pilot_msft_2025_net_income",
+        "question": "What was MSFT's net income in fiscal year 2025?",
+        "pipeline": "xbrl",
+        "ticker": "MSFT",
+        "fiscal_year": 2025,
+        "concept_key": "net_income",
+        "accession": "0000950170-25-100235",
+        "value": "101832000000",
+        "tolerance_pct": 0,
+        "tags": [
+          "numeric",
+          "formatter-pilot"
+        ],
+        "reference": {
+          "unit": "USD",
+          "reported_scale": 1000000,
+          "line_item": "Net income",
+          "url": "https://www.sec.gov/Archives/edgar/data/789019/000095017025100235/msft-20250630.htm"
+        }
+      },
+      "fact": {
+        "cik": "0000789019",
+        "concept": "net_income",
+        "concept_key": "net_income",
+        "unit": "USD",
+        "value": "101832000000.0000",
+        "period_end": "2025-06-30",
+        "fiscal_year": 2025,
+        "fiscal_period": "FY",
+        "accession_no": "0000950170-25-100235",
+        "form": "10-K"
+      },
+      "variants": {
+        "python": {
+          "answer": "MSFT's net income was $101,832,000,000.",
+          "amount_correct": true,
+          "note": "displayed 101832000000, expected 101832000000 ±0.0%",
+          "ms": 0.008299999990413198,
+          "generation_invocations": 0
+        },
+        "llm": {
+          "answer": "MSFT's net income in fiscal year 2025 was 101832000000.0000 USD.",
+          "amount_correct": true,
+          "note": "displayed 101832000000.0000, expected 101832000000 ±0.0%",
+          "ms": 425.25320000004285,
+          "generation_invocations": 1
+        }
+      },
+      "input_matches_label": true
+    }
+  ]
+}
